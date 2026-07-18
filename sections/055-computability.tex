@@ -1,0 +1,498 @@
+% ------------------------------------------------------------
+% §7  Computability, complexity, and barriers
+% ------------------------------------------------------------
+\section{The view from computability}\label{sec:computability}
+
+The gap of \cref{sec:gap} is a statement about missing \emph{positive}
+knowledge. It is worth closing the overview by asking the complementary,
+sharper question: what is \emph{provably} true about the difficulty of
+breaking \SHA{}? Here the news is a genuine mix of hard theorems and hard
+barriers, and the boundary between them is itself part of the object's
+significance.
+
+\subsection{Breaking \SHA{} is an \textsc{np} search problem}
+\label{sec:npsearch}
+
+Fix a target digest $y$ and ask for a preimage: some $x$ with
+$\SHA(x) = y$. Because \SHA{} is computable by a small circuit
+(\cref{sec:history}), a candidate $x$ can be \emph{checked} in linear
+time, so preimage-finding is an \textsc{np} search problem in the exact
+sense of Cook and Levin~\citep{CookLevin1971}: the ``inversion''
+relation is polynomial-time decidable, and the only question is the cost
+of \emph{search}. Encode one evaluation of the compression function as a
+Boolean circuit---about $2^{16}$ gates---and the equation
+$\SHA(x)=y$ becomes a concrete instance of the satisfiability problem
+\textsc{sat}, the canonical \textsc{np}-complete language.
+
+The translation is worth seeing once, because it is almost embarrassingly
+direct (\cref{fig:tseitin}). Give every wire of the circuit its own
+Boolean variable; each gate then constrains its three wires by a handful
+of clauses, satisfied exactly by the gate's truth table; pin the $256$
+output variables to the bits of $y$. The conjunction of all clauses is
+satisfiable \emph{if and only if} a preimage exists, and any satisfying
+assignment, read off the input wires, \emph{is} a preimage. The whole of
+\SHA{}'s round structure---$\Sigma$'s, carries, message schedule---flattens
+into a few hundred thousand such clauses, syntactically indistinguishable
+from any other \textsc{sat} instance. A modern conflict-driven
+(``\textsc{cdcl}'') solver then does something almost mathematical with
+it: it explores partial assignments, and each dead end is analyzed into
+a \emph{learned clause}---a small lemma, added to the formula, recording
+why that region of the search space is empty. A solver run is a
+proof-by-cases of astronomical width, conducted by a machine that
+invents its own case analysis.
+
+\begin{figure}[ht]
+  \centering
+  \begin{tikzpicture}[font=\small,
+      wire/.style={thick},
+      lbl/.style={font=\scriptsize}]
+    % --- little AND gate ---
+    \draw[wire] (-1.0,0.55) node[left, lbl] {$u$} -- (0,0.55);
+    \draw[wire] (-1.0,-0.15) node[left, lbl] {$v$} -- (0,-0.15);
+    % gate body (D shape)
+    \draw[thick, fill=projfill]
+      (0,-0.5) -- (0.55,-0.5) arc[start angle=-90, end angle=90,
+      radius=0.7] -- (0,0.9) -- cycle;
+    \node at (0.42,0.2) {$\wedge$};
+    \draw[wire] (1.25,0.2) -- (2.1,0.2) node[right, lbl] {$w$};
+    % --- arrow to clauses ---
+    \draw[->, thick] (2.9,0.2) -- (3.6,0.2);
+    \node[anchor=west, align=left, font=\small] at (3.75,0.2)
+      {$(\lnot u \vee \lnot v \vee w)$\\
+       $(u \vee \lnot w)$\\
+       $(v \vee \lnot w)$};
+    % --- caption line under both ---
+    \node[lbl, align=center, anchor=north] at (3.1,-1.0)
+      {one fresh variable per wire, a few clauses per gate;\\
+       ${\sim}2^{16}$ gates $\Rightarrow$ a few $\times 10^{5}$ clauses;
+       pin $256$ output literals to $y$ and solve.};
+  \end{tikzpicture}
+  \caption{The reduction that makes ``invert \SHA{}'' a \textsc{sat}
+  instance: each gate becomes clauses that are satisfied exactly by its
+  truth table (shown: $w = u \wedge v$). Nothing about the construction
+  is clever, and that is the point---membership in \textsc{np} is a
+  statement about \emph{checkability}, and it holds for \SHA{} as
+  mechanically as for any puzzle whose solutions can be verified.}
+  \label{fig:tseitin}
+\end{figure}
+
+This is not a metaphor: the reduction is run in practice, and by now the
+solvers are genuine instruments of record. As early as 2006, Mironov and
+Zhang reproduced Wang-style MD5 collisions with an off-the-shelf
+\textsc{sat} solver, no differential expertise wired in---the solver
+rediscovering, clause by learned clause, constraints it had never been
+told~\citep{MironovZhang2006}. Today the traffic runs both directions:
+the current record semi-free-start collision on $39$-round \SHA{} was
+found with a \textsc{sat}/\textsc{smt} search for the differential
+trails of \cref{sec:craft}~\citep{LiLiuWang2024}, and a programmatic
+\textsc{sat} solver---one that injects cryptanalytic knowledge as it
+runs---produced the first practical $38$-round semi-free-start collision
+independently of the classical toolchain~\citep{AlamgirNejatiBright2024}.
+The empirical shape of all this effort is a cliff: instances for few
+rounds collapse in milliseconds, then somewhere past round $20$ the
+running times turn vertical, and no amount of solver engineering has
+moved the wall more than a round or two per decade. The cliff's very
+existence is one more coordinate in the natural history of the
+function---and, unlike most such coordinates, it is cheap to measure.
+
+\begin{project}{The \textsc{sat} cliff}{programming; propositional
+  logic}{4--6 weeks}
+  Build (or generate with existing tools) \textsc{cnf} encodings of
+  $r$-round \SHA{} preimage instances (\cref{fig:tseitin}) and feed
+  them to two or three modern solvers. Chart solving time against $r$
+  until timeout; then vary what is pinned (full digest, partial digest,
+  collision instead of preimage) and watch the cliff move. Plot, on the
+  same axis, where the statistical batteries start failing
+  (\cref{sec:gap}'s project) and where the differential trails of
+  \cref{sec:siege} die: three instruments' frontiers, never to our
+  knowledge drawn on one chart. The deliverable is that chart---a
+  measured portrait of ``hardness turning on'' round by round.
+\end{project}
+
+But note precisely what \textsc{np}-completeness does and does not say.
+It says the \emph{worst case} of \textsc{sat} is hard unless
+$\mathrm{P}=\mathrm{NP}$; it says almost nothing about the specific,
+highly structured instances that hashing produces. Cryptography needs
+\emph{average-case} and \emph{one-way} hardness---hard instances that are
+easy to \emph{generate} with a solution---and this is a strictly stronger
+and more delicate demand than worst-case \textsc{np}-hardness. No
+reduction shows that inverting \SHA{} is \textsc{np}-hard, and this is
+not merely an unfilled cell in the table: there is a theorem-shaped
+reason to expect no such reduction. Akavia, Goldreich, Goldwasser, and
+Moshkovitz showed that a black-box reduction (of the standard,
+non-adaptive kind) from an \textsc{np}-hard problem to \emph{inverting a
+one-way function} would itself trigger complexity-theoretic collapses
+nobody believes~\citep{AkaviaGGM2006}. The missing bridge between
+$\mathrm{P} \ne \mathrm{NP}$ and \SHA{}'s security is not awaiting a
+clever graduate student; by the best current evidence, the standard
+bridge-building technology provably cannot span that river.
+
+\subsection{Five worlds, one function}\label{sec:worlds}
+
+The distinction just drawn---worst-case hardness versus generatable
+hardness---organizes the deepest open question in the area, and
+Impagliazzo gave it an unforgettable form: five possible worlds, exactly
+one of which is real~\citep{Impagliazzo1995}. \Cref{fig:worlds} draws
+the ladder and scores our function in each world. The point of the
+exercise for this paper: \emph{whether an object like \SHA{} can exist
+at all} is not a detail of cryptography but the exact content of the
+rung between Pessiland and Minicrypt---the existence of one-way
+functions---and it is wide open. Everything this paper treats as
+mysterious about one specific function is, one level up, the mystery on
+which the classification of computational reality turns.
+
+\begin{figure}[ht]
+  \centering
+  \begin{tikzpicture}[font=\small,
+      wname/.style={font=\bfseries\small, anchor=west},
+      wdesc/.style={font=\scriptsize, align=left, anchor=west,
+                    text width=82mm, inner sep=0pt},
+      lbl/.style={font=\scriptsize}]
+    % strata, bottom = algorithmica; each row 1.2cm tall, 11.8cm wide
+    \fill[padfill]  (0,4.8) rectangle (11.8,6.0);
+    \fill[projfill] (0,3.6) rectangle (11.8,4.8);
+    \fill[lenfill]  (0,2.4) rectangle (11.8,3.6);
+    \fill[red!7]    (0,1.2) rectangle (11.8,2.4);
+    \fill[red!14]   (0,0)   rectangle (11.8,1.2);
+    \draw (0,0) rectangle (11.8,6.0);
+    \foreach \y in {1.2,2.4,3.6,4.8} \draw (0,\y) -- (11.8,\y);
+    \node[wname] at (0.2,5.4) {Cryptomania};
+    \node[wdesc] at (2.85,5.4)
+      {trapdoors exist: public-key cryptography, the internet as
+       deployed (\SHA{} still does the hashing)};
+    \node[wname] at (0.2,4.2) {Minicrypt};
+    \node[wdesc] at (2.85,4.2)
+      {one-way functions exist: \SHA{} can be what it appears---PRGs,
+       signatures, proof-of-work all sound};
+    \node[wname] at (0.2,3.0) {Pessiland};
+    \node[wdesc] at (2.85,3.0)
+      {hard random instances abound, but none can be generated
+       \emph{with its solution}: no one-wayness; \SHA{} invertible};
+    \node[wname] at (0.2,1.8) {Heuristica};
+    \node[wdesc] at (2.85,1.8)
+      {\textsc{np} hard only in the worst case; typical instances
+       easy---\SHA{} broken in practice};
+    \node[wname] at (0.2,0.6) {Algorithmica};
+    \node[wdesc] at (2.85,0.6)
+      {$\mathrm{P}=\mathrm{NP}$ (in spirit): every preimage findable
+       fast; cryptography impossible, algorithmics paradise};
+    % the one-way-function line
+    \draw[very thick, dashed, citewine] (0,3.6) -- (12.35,3.6);
+    \node[lbl, citewine, anchor=north west, align=left, text width=21mm]
+      at (12.0,3.45) {the one-way-\\function line};
+    % brace: SHA's conjectured home
+    \draw[decorate, decoration={brace, amplitude=6pt}]
+      (12.0,3.7) -- (12.0,5.95)
+      node[midway, right=8pt, lbl, align=left, text width=21mm]
+      {if \SHA{} is what it appears to be, the real world is here};
+  \end{tikzpicture}
+  \caption{Impagliazzo's five worlds: mutually
+  exclusive possibilities for how computation works, exactly one of
+  them actual, none of them ruled out. \SHA{}'s conjectured properties
+  assert that we live above the one-way-function line (at least
+  Minicrypt)---a claim strictly \emph{weaker} than what public-key
+  cryptography bets on, and strictly \emph{stronger} than
+  $\mathrm{P} \ne \mathrm{NP}$. Note where the quantum threat falls:
+  Shor-type algorithms attack the classical inhabitants of Cryptomania,
+  while against the generic hashing of Minicrypt the provable quantum
+  gain is only the square root of \cref{sec:barriers}.}
+  \label{fig:worlds}
+\end{figure}
+
+Two theorems furnish that observation with content, and a third---the
+one this section builds toward---turns it into an exact equivalence.
+
+First: \emph{Minicrypt has a canonical witness}. Levin constructed an
+explicit, fully specified ``universal one-way function''---a concrete
+program one can write down today---which is one-way \emph{if any one-way
+function exists at all}~\citep[the tale, and the construction, are told
+in][]{Levin2003}. Existence of the whole kingdom is thus equivalent to
+the hardness of one specific function, in print since the 1980s. Why,
+then, does anyone bother with \SHA{}? Because Levin's function is a
+diagonalization---roughly, it runs all short programs and combines
+their outputs---and its guarantee is bought at constants and exponents
+that make it a philosophical instrument, not an engineering material.
+Once any one-way function exists, moreover, the whole private-key
+toolbox follows by explicit constructions: H{\aa}stad, Impagliazzo,
+Levin, and Luby showed pseudorandom generators can be built from
+\emph{any} one-way function~\citep{HILL1999}, with signatures and
+message authentication downstream. Read against \cref{sec:gap}: theory
+already possesses, with proofs, the entire architecture the world
+needs---resting on an unproven ground floor and running too slowly to
+use. \SHA{} is the engineering shadow of Levin's function: the object
+you deploy when you want the universal guarantee at gigabytes per
+second, and are willing to trade the theorem away for it.
+
+Second, the same result read as a boundary: the Akavia--Goldreich--%
+Goldwasser--Moshkovitz theorem above says the ground floor cannot be
+poured from worst-case \textsc{np}-hardness by standard reductions. The
+two faces together frame the epistemic situation exactly: everything
+above the one-way-function line is solved mathematics; the line itself
+is untethered to the rest of complexity theory.
+
+\subsection{An exact address for the one-way line}\label{sec:liupass}
+
+The third result is recent (2020) and, to our taste, the most
+beautiful in the whole subject, because it identifies the one-way-%
+function line of \cref{fig:worlds} with the hardness of a problem this
+paper has been circling from the start: \emph{detecting structure in
+apparently random strings}. Making that precise takes four definitions,
+each elementary; we give them carefully, because the payoff is a genuine
+``if and only if'' and it is worth being able to read it exactly.
+
+\paragraph{Kolmogorov complexity.} Fix once and for all a universal
+Turing machine $U$ (a fixed interpreter: it runs a program $\Pi$ on an
+input and prints the result). The \emph{Kolmogorov complexity} of a
+string $x \in \bitstrings^{*}$ is the length of the shortest program
+that outputs it,
+\[
+  K(x) \;=\; \min\bigl\{\, |\Pi| \;:\; U(\Pi) = x \,\bigr\}.
+\]
+This is the honest measure of ``information content'': a patterned
+string like $(01)^{n}$ has a tiny generator (``print \texttt{01}
+$n$ times''), so $K \approx \log_2 n$, while a structureless string has
+no description shorter than itself, $K(x) \approx |x|$. The trouble, for
+our purposes, is that $K$ is \emph{uncomputable}---pinning it down
+solves the halting problem---so it cannot be the hard problem
+cryptography stands on. Something must give the program a deadline.
+
+\paragraph{Time-bounded Kolmogorov complexity.} Fix a polynomial time
+bound $t(\cdot)$. The \emph{$t$-time-bounded} complexity restricts the
+minimization to programs that print $x$ \emph{within $t(|x|)$ steps}:
+\[
+  K^{t}(x) \;=\; \min\bigl\{\, |\Pi| \;:\;
+      U(\Pi) = x \text{ in at most } t(|x|) \text{ steps} \,\bigr\}.
+\]
+Now the quantity \emph{is} computable---enumerate all programs of length
+$\le |x|$, run each for $t(|x|)$ steps, keep the shortest that prints
+$x$---but that brute force costs about $2^{|x|}$. The entire question is
+whether one can do better than brute force, and specifically whether one
+can do better \emph{on average}, over a random string $x$.
+
+\paragraph{Why almost every string is incompressible.} A counting fact
+fixes the landscape (\cref{fig:kolmogorov}). There are only
+$2^{n-d}-1 < 2^{n-d}$ programs shorter than $n-d$ bits, so at most a
+$2^{-d}$ fraction of the $2^{n}$ strings of length $n$ can have
+$K^{t}(x) < n-d$. Compressible strings---those with real structure a
+fast program can exploit---are \emph{exponentially rare}; the mass of
+$K^{t}$ piles up just below the diagonal $K^{t}(x)=n$. In particular the
+\emph{trivial estimate} ``$K^{t}(x) = |x|$''---equivalently, the
+one-line algorithm that ignores $x$ and outputs its length---is correct
+to within $d$ bits on all but a $2^{-d}$ fraction of inputs. Estimating
+$K^{t}$ better than this trivial baseline is precisely the act of
+\emph{detecting the rare structure}, and that is the task whose
+difficulty the theorem measures.
+
+\begin{figure}[ht]
+  \centering
+  \begin{tikzpicture}[font=\small]
+    % axes
+    \draw[->] (0,0) -- (7.4,0) node[below left=0.5mm and -8mm]
+      {$K^{t}(x)$};
+    \draw[->] (0,0) -- (0,3.5) node[above, align=center, font=\scriptsize]
+      {\# of $n$-bit\\ strings};
+    \draw[dashed, gray] (6,0) -- (6,3.2) node[above, font=\scriptsize,
+      black] {$n$};
+    % exponential pile-up near n: bars doubling toward n
+    \foreach \k/\h in {1.2/0.10, 1.8/0.14, 2.4/0.2, 3.0/0.28, 3.6/0.42,
+                       4.2/0.62, 4.8/0.95, 5.4/1.5, 5.85/2.7} {
+      \fill[projframe!75] (\k-0.11,0) rectangle (\k+0.11,\h);
+    }
+    \node[font=\scriptsize, align=center, projframe] at (2.5,2.35)
+      {structured strings:\\ a $2^{-d}$ sliver\\ with $K^{t}<n-d$};
+    \draw[->, projframe, font=\scriptsize] (2.5,1.85) -- (3.1,0.45);
+    \node[font=\scriptsize, align=center, anchor=east] at (7.3,2.4)
+      {almost all mass:\\ $K^{t}(x)\approx n$\\ (incompressible)};
+    \draw[decorate, decoration={brace, amplitude=4pt}]
+      (0.15,-0.35) -- (4.2,-0.35)
+      node[midway, below=4pt, font=\scriptsize]
+      {beating ``output $|x|$'' here $=$ detecting structure};
+  \end{tikzpicture}
+  \caption{The distribution of time-bounded Kolmogorov complexity over
+  random $n$-bit strings. By counting, at most a $2^{-d}$ fraction can
+  be compressed below $n-d$; the histogram is crushed against the
+  incompressible edge $K^{t}\!=\!n$. The one-line ``output $|x|$''
+  algorithm is therefore right for nearly everyone---and Liu--Pass say
+  that noticeably out-performing it, on average, is exactly as hard as
+  inverting every one-way function.}
+  \label{fig:kolmogorov}
+\end{figure}
+
+\paragraph{Mild average-case hardness, and one-wayness.} Two more
+definitions, now the load-bearing ones. Say $K^{t}$ is
+\emph{mildly hard-on-average} if some polynomial $p$ makes it
+uncomputable on a noticeable slice: for every probabilistic
+polynomial-time algorithm $A$ and all large $n$,
+\[
+  \Pr_{x \,\gets\, \bitstrings^{n}}
+     \bigl[\, A(x) \ne K^{t}(x) \,\bigr] \;\ge\; \frac{1}{p(n)} .
+\]
+The word to dwell on is \emph{mild}: $A$ is permitted to be right on a
+$1 - 1/p(n)$ super-majority of strings; hardness on just an
+inverse-polynomial sliver suffices. And a \emph{one-way function}---the
+one-wayness informally invoked back in \cref{sec:npsearch}---is a
+polynomial-time computable $f$ that no probabilistic polynomial-time $A$
+can invert except with vanishing probability: for every such $A$, every
+polynomial $p$, and all large $n$,
+\[
+  \Pr_{x \,\gets\, \bitstrings^{n}}
+     \bigl[\, f(A(f(x))) = f(x) \,\bigr] \;<\; \frac{1}{p(n)} .
+\]
+Existence of any such $f$ is the Minicrypt hypothesis---the rung of
+\cref{fig:worlds} on which \SHA{}'s conjectured life depends.
+
+\begin{theorem}[Liu--Pass 2020]\label{thm:liupass}
+For every polynomial $t(n) \ge (1+\varepsilon)n$ with $\varepsilon>0$
+constant, the following are equivalent:
+\begin{enumerate}
+  \item One-way functions exist (equivalently: secure private-key
+  encryption, pseudorandom generators, pseudorandom functions, digital
+  signatures, and commitments all exist).
+  \item $K^{t}$ is mildly hard-on-average.
+\end{enumerate}
+Moreover the equivalence is robust to approximation: if one-way
+functions exist then no efficient algorithm can even
+$(d\log n)$-approximate $K^{t}$ on meaningfully more than the trivial
+fraction, for any constant $d$~\citep{LiuPass2020}.
+\end{theorem}
+
+The approximation clause is the sharpest way to feel the result. The
+do-nothing algorithm ``output $|x|$'' already $(d\log n)$-approximates
+$K^{t}$ with probability $\ge 1 - n^{-d}$ (the counting fact again); the
+theorem says that beating even \emph{that} baseline, by any
+inverse-polynomial margin, is as hard as breaking \emph{every} one-way
+function at once. A hair of non-trivial structure-detection, made
+reliable, would collapse all of private-key cryptography.
+
+Now read \cref{thm:liupass} in this paper's language. ``$K^{t}(x)$ is
+small'' means \emph{$x$ has detectable structure}---a short program
+generates it fast. Estimating $K^{t}$ on random inputs is therefore
+exactly \emph{hunting for hidden structure in apparently random
+strings, on average}---the naturalist's question of \cref{sec:epistemology},
+promoted from one function to all strings. The theorem says this hunt is
+(mildly) hard \emph{if and only if} objects like \SHA{} can exist at
+all. The connection is not a loose analogy; it is the same activity. A
+pseudorandom string---say a stretch of the counter stream $\SHA(1),
+\SHA(2), \dots$ of \cref{sec:below}---has genuinely \emph{low} $K^{t}$
+(the short program ``\,print $\SHA(1..m)$\,'' generates it quickly), yet
+is engineered to look maximally incompressible; a distinguisher that
+noticed the gap would be estimating $K^{t}$ better than trivial on
+exactly these strings, which is to say breaking the generator. So the
+empirical program of \cref{sec:gap}---point an instrument at a
+pseudorandom object and measure whether any structure pokes through---is
+not merely \emph{analogous} to the problem on which the existence of
+cryptography rests. Up to the formalization, it \emph{is} that problem,
+shrunk to a single function and a laptop. We know no cleaner statement
+of why the small experiments of \cref{sec:projects} sit on the main line
+of the subject rather than beside it.
+
+\subsection{Two-sided barriers: what is provably out of reach}
+\label{sec:barriers}
+
+The deepest results in this corner are \emph{impossibility} theorems,
+and they cut in two directions at once.
+
+On the side of \emph{attacks}, the quantum model yields rare
+unconditional lower bounds. Grover search inverts any black-box function
+on $N$ points in $\Theta(\sqrt{N})$ queries, and this is provably
+optimal---no quantum algorithm does better \emph{relative to the
+oracle}~\citep{BBBV1997}; for collisions, the Brassard--H{\o}yer--Tapp
+birthday-style algorithm costs $\Theta(N^{1/3})$, and Aaronson and Shi
+proved a matching $\Omega(N^{1/3})$ quantum lower
+bound~\citep{AaronsonShi2004}. These theorems bound what \emph{any}
+algorithm can do against a function that behaves as a random oracle, so
+they translate into concrete, believed-tight security levels for
+\SHA{}---$128$ quantum bits of preimage resistance, and the reason a
+$256$-bit digest is considered ``quantum-safe'' for collision resistance.
+The catch, familiar by now, is the model: the bounds hold in the
+black-box world and become claims about \SHA{} only under the heuristic
+that no shortcut exploits its actual circuit.
+
+It is worth pausing to give exponents like $2^{128}$ an empirical
+scale, because the planet happens to be running the relevant
+experiment. The proof-of-work industry of \cref{sec:uses} evaluates
+\SHA{} about $10^{21}$ times per second---roughly $2^{70}$---and its
+cumulative total to date is on the order of $2^{96}$ evaluations:
+comfortably the largest computation of any kind in human history,
+every cycle of it hammering on this one function. Two readings. As a
+\emph{statistical} instrument: block arrivals track the uniform model
+with textbook fidelity, so this is the most expensive test of the
+random-function conjecture ever conducted, passed to date. As a
+\emph{yardstick}: the deepest partial inversion all that work has ever
+exhibited is a digest beginning with roughly a hundred zero
+bits---each mined block is a certified partial preimage, currently
+costing about $2^{79}$ evaluations apiece---which still leaves the full
+$256$-bit inversion about $2^{156}$ times beyond the species' total
+output, and even the $2^{128}$ birthday bound a factor of four billion
+past everything computed so far. When \cref{sec:telescope} says the
+global geometry of the functional graph is ``operationally
+unreachable,'' this is the industrial base against which
+``unreachable'' is calibrated.
+
+On the side of \emph{proofs}, the barrier theorems explain the gap of
+\cref{sec:gap} as something deeper than a lack of effort. The
+\emph{natural proofs} barrier of Razborov and
+Rudich~\citep{RazborovRudich1997} shows that any proof of a strong
+circuit lower bound which is itself ``constructive and large''---the form
+essentially all known lower-bound techniques take---would, ironically,
+yield an algorithm breaking the very pseudorandom functions such a lower
+bound is meant to certify. In slogan form: \emph{the existence of objects
+like \SHA{} is precisely what prevents us from proving that objects like
+\SHA{} are hard} by current methods. This is why nobody expects an
+unconditional proof of \SHA{}'s security in the foreseeable future, and
+why the honest theorems in the subject are either conditional
+(\cref{sec:frameworks}), relativized (the quantum bounds above), or about
+components rather than the whole (\cref{thm:rivest}).
+
+\subsection{What the proof assistants did prove}\label{sec:verified}
+
+After a section of impossibilities, it is worth recording where
+machine-checked mathematics has \emph{succeeded} with \SHA{}---because
+it has, completely, one floor down. In 2015 Appel produced a formal,
+machine-checked proof, in the Coq proof assistant, that OpenSSL's C
+implementation of \SHA{} computes exactly the function specified in
+FIPS 180-4: every pointer offset, every rotation, every corner of C
+semantics, verified down to a mechanized model of the
+compiler's view of the program~\citep{Appel2015}. The HACL\textsuperscript{*}
+project carried the method to an entire cryptographic library, written
+in the F\textsuperscript{*} proof language and compiled to C; its
+verified \SHA{} ships inside Firefox, executing in ordinary users'
+browsers~\citep{Zinzindohoue2017}. These are not toy exercises; they
+retire a whole species of real historical failure, the
+\emph{implementation} bug---and they are proofs about \SHA{} in the
+strictest sense of the word.
+
+The epistemological inversion deserves to be savored. \emph{Everything
+provable about \SHA{} has now been proved by machines: namely, that the
+program is the function.} What no one can prove is any property of the
+function itself. Formal verification thus sharpens the boundary of
+\cref{sec:gap} into a visible line: below it, mechanized
+certainty---code equals specification, checked symbol by symbol; above
+it, Rogaway's human ignorance (\cref{sec:definitions}), trust
+underwritten by two decades of failed attack. The axiom has quietly
+moved. It is no longer ``this function is one-way''; it is ``this
+function is the one we wrote down''---and only the second statement is
+checkable. A mathematician could not ask for a cleaner exhibit of where,
+exactly, in one industrial object, the proved ends and the conjectured
+begins.
+
+\subsection{Where this leaves the program}
+\label{sec:leaves}
+
+The computability view sharpens, rather than dampens, the case for the
+empirical program of this paper. Unconditional hardness is provably out
+of reach by known methods; worst-case \textsc{np}-hardness is the wrong
+target, and provably unavailable by standard reductions
+(\cref{sec:worlds}); the clean theorems that do exist are relativized
+bounds assuming random-oracle behavior, or certify the code rather than
+the function (\cref{sec:verified}). What is \emph{not} ruled out---by
+any barrier theorem---is the discovery of exact, non-statistical
+structure in specific reduced systems, of the kind \cref{sec:hope}
+catalogued next door and \cref{thm:rivest} exhibited inside the function
+itself. The barriers forbid a certain style of \emph{general} proof;
+they say nothing against a Josephus-style collapse of a
+\emph{particular} finite object. That is exactly the crack the
+undergraduate program of \cref{sec:projects} proposes to work in: not to
+prove \SHA{} hard---provably hopeless---but to map, instance by instance
+and coordinate by coordinate, where the structure ends and the noise
+begins.

@@ -1,0 +1,153 @@
+% ============================================================
+% Shared preamble for all variants of the document.
+% Each top-level file (main.tex, main-algebra.tex,
+% main-projects.tex) does:
+%     \providecommand{\DocPdfTitle}{...}   % optional override
+%     \input{preamble}
+% then supplies its own title/abstract and \input's the sections.
+% ============================================================
+\documentclass[11pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1.15in]{geometry}
+
+% ---- Math (load before newpx; newpxmath supplies AMS symbols) ----
+\usepackage{amsmath,amsthm}
+
+% ---- Typography ----
+\usepackage{newpxtext,newpxmath}   % Palatino-family text + matching math
+\usepackage{microtype}
+
+% ---- Tables ----
+\usepackage{booktabs,array}
+\usepackage{float}   % [H] to pin the batteries table at its reference
+
+% ---- Color, graphics, boxes ----
+\usepackage[dvipsnames]{xcolor}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc,shapes.geometric,decorations.pathreplacing}
+\usepackage[most]{tcolorbox}
+
+\definecolor{linknavy}{RGB}{0,60,120}
+\definecolor{citewine}{RGB}{120,20,50}
+\definecolor{projfill}{RGB}{245,247,240}
+\definecolor{projframe}{RGB}{90,120,70}
+\definecolor{msgfill}{RGB}{213,229,245}   % message bits (blue)
+\definecolor{lenfill}{RGB}{250,224,188}   % length field (orange)
+\definecolor{padfill}{RGB}{198,224,180}   % single pad bit (green)
+\definecolor{archgreen}{RGB}{20,110,60}   % local-archive links in bibliography
+\definecolor{codegray}{RGB}{120,120,120}
+
+% ---- Code listings (appendix) ----
+\usepackage{listings}
+\lstset{
+  language=Python,
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\bfseries\color{linknavy},
+  commentstyle=\itshape\color{codegray},
+  stringstyle=\color{archgreen},
+  showstringspaces=false,
+  numbers=left,
+  numberstyle=\tiny\color{codegray},
+  numbersep=8pt,
+  breaklines=true,
+  keepspaces=true,
+  columns=flexible,
+  frame=leftline,
+  framerule=0.8pt,
+  rulecolor=\color{projframe},
+  xleftmargin=1.5em,
+  aboveskip=1em,
+}
+
+% ---- Citations: natbib (author-year) + BibTeX ----
+\usepackage[round]{natbib}
+
+% ---- Hyperlinks with SECTION-level back-references ----
+% backref=section makes each bibliography entry list the *sections*
+% in which it is cited, hyperlinked back into the text.
+\providecommand{\DocPdfTitle}{SHA-256 as a Mathematical Object}
+\usepackage[colorlinks=true,
+            linkcolor=linknavy,
+            citecolor=citewine,
+            urlcolor=linknavy,
+            backref=section,
+            pdftitle={\DocPdfTitle},
+            pdfauthor={}]{hyperref}
+\usepackage{cleveref}
+
+% Last-updated stamp: `make` regenerates lastupdated.tex with the
+% current Pacific date/time; fall back to \today if absent.
+\InputIfFileExists{lastupdated}{}{}
+\providecommand{\lastupdated}{\today}
+
+% The bibliography is thematically clustered: tools/clusterbbl.py
+% (run automatically after bibtex via .latexmkrc) inserts cluster
+% headers into the .bbl. Suppress natbib's automatic heading; we
+% typeset our own.
+\renewcommand{\bibsection}{}
+
+% Format back-references as "Cited in §2, §4.1, and §6."
+\renewcommand*{\backrefsep}{, \S}
+\renewcommand*{\backreftwosep}{ and \S}
+\renewcommand*{\backreflastsep}{, and \S}
+\renewcommand*{\backref}[1]{}% disable the plain list; use \backrefalt
+\renewcommand*{\backrefalt}[4]{%
+  \ifcase #1\relax
+  \or {\footnotesize\itshape Cited in \S#2.}%
+  \else {\footnotesize\itshape Cited in \S#2.}%
+  \fi}
+
+% ---- Theorem environments ----
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{fact}[theorem]{Fact}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+% ---- Undergraduate project boxes ----
+% \begin{project}{Short title}{prerequisites}{time window} ... \end{project}
+% Plain (non-\refstepcounter) counter: keeps citations inside boxes
+% anchored to the enclosing section, so backref dedup works.
+\newcounter{projectctr}
+\newtcolorbox{project}[3]{%
+  enhanced, breakable,
+  code={\stepcounter{projectctr}},
+  colback=projfill, colframe=projframe,
+  fonttitle=\bfseries\small,
+  title={Project \theprojectctr: #1},
+  attach boxed title to top left={yshift=-2mm, xshift=4mm},
+  boxed title style={colback=projframe},
+  after upper={\par\smallskip\footnotesize\textit{Prerequisites:} #2\quad
+               \textit{Window:} #3},
+  left=2mm, right=2mm, top=3mm, bottom=2mm
+}
+
+% ---- Reading-spine box for variant front matter ----
+% \begin{readingspine}{title} ... \end{readingspine}
+\newtcolorbox{readingspine}[1]{%
+  enhanced, breakable,
+  colback=projfill, colframe=projframe,
+  fonttitle=\bfseries\small,
+  title={#1},
+  attach boxed title to top left={yshift=-2mm, xshift=4mm},
+  boxed title style={colback=projframe},
+  left=2mm, right=2mm, top=3mm, bottom=2mm
+}
+
+% Local archived copy of a cited work: visually distinct (green) and
+% clickable — opens refs/<file> relative to this PDF's location.
+\newcommand{\localpdf}[1]{\href{./refs/#1}{\textcolor{archgreen}{$\blacktriangleright$\,\texttt{refs/#1}}}}
+
+% ---- Notation macros ----
+\newcommand{\Ztwo}{\mathbb{Z}/2^{32}\mathbb{Z}}
+\newcommand{\Ftwo}{\mathbb{F}_2}
+\newcommand{\State}{\mathcal{S}}
+\newcommand{\shaxor}{\oplus}
+\newcommand{\shaplus}{\boxplus}
+\newcommand{\SHA}{\textsf{SHA-256}}
+\newcommand{\bitstrings}{\{0,1\}}

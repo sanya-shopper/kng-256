@@ -1,0 +1,171 @@
+% ------------------------------------------------------------
+% §1  Opener: the Josephus problem as epistemological archetype
+% ------------------------------------------------------------
+\section{A pattern where none was promised}\label{sec:josephus}
+% Save this section's hyperref anchor so citations appearing after the
+% floated figure still record a section-level backref (not figure.1),
+% keeping the bibliography's "Cited in §…" list free of duplicates.
+\makeatletter\edef\josephussectionhref{\@currentHref}\makeatother
+
+\emph{Concrete Mathematics} opens with a small massacre~\citep[\S 1.1]{GKP1994}.
+Number $n$ people $1,2,\dots,n$ standing in a circle, and going around the
+circle eliminate every second person until one survives. Which position
+$J(n)$ survives? For $n=10$ the eliminations run
+$2,4,6,8,10,3,7,1,9$, and the survivor is $J(10)=5$
+(\cref{fig:josephus}). Computing small cases and staring at them reveals
+that if $n = 2^m + \ell$ with $0 \le \ell < 2^m$, then
+\begin{equation}\label{eq:josephus}
+  J(2^m + \ell) \;=\; 2\ell + 1 ,
+\end{equation}
+which says something better in binary: \emph{$J(n)$ is the one-bit
+cyclic left shift of $n$}. For $n = 10 = (1010)_2$ we get $J(n) =
+(0101)_2 = 5$. An iterative algorithmic process ends up having a
+solution involving a simple bit manipulation of the binary
+representation of the input. (Hold on to one question as you read: what
+happens if every \emph{third} person is eliminated instead? We will not
+answer it until \cref{sec:josephus3}, where it becomes a parable about
+the constants in \SHA{}'s own definition.)
+
+\begin{figure}[!ht]
+  \centering
+  % One circle of 10, with the given people crossed out (cumulative):
+  % #1 = list of position/elimination-order pairs to cross, #2 = sublabel
+  \newcommand{\joscircle}[2]{%
+    \begin{tikzpicture}[baseline=(current bounding box.center)]
+      \foreach \i in {1,...,10} {
+        \pgfmathsetmacro{\ang}{90 - (\i-1)*36}
+        \node[circle, draw, minimum size=4.5mm, inner sep=0pt,
+              font=\scriptsize] (p\i) at (\ang:1.35) {\i};
+      }
+      \foreach \i/\elim in {#1} {
+        \pgfmathsetmacro{\ang}{90 - (\i-1)*36}
+        \draw[gray] ($(p\i)+(-0.19,-0.19)$) -- ($(p\i)+(0.19,0.19)$);
+        \node[gray, font=\tiny] at (\ang:1.8) {\elim};
+      }
+      \node[font=\footnotesize, align=center] at (0,-2.35) {#2};
+    \end{tikzpicture}}%
+  \joscircle{2/1, 4/2, 6/3, 8/4, 10/5}{first lap:\\$2,4,6,8,10$ go}%
+  \,$\to$\,%
+  \joscircle{2/1, 4/2, 6/3, 8/4, 10/5, 3/6, 7/7}{second lap:\\$3,7$ go}%
+  \,$\to\cdots\to$\,%
+  \begin{tikzpicture}[baseline=(current bounding box.center)]
+    \foreach \i in {1,...,10} {
+      \pgfmathsetmacro{\ang}{90 - (\i-1)*36}
+      \node[circle, draw, minimum size=4.5mm, inner sep=0pt,
+            font=\scriptsize] (p\i) at (\ang:1.35) {\i};
+    }
+    \foreach \i/\elim in {2/1, 4/2, 6/3, 8/4, 10/5, 3/6, 7/7, 1/8, 9/9} {
+      \pgfmathsetmacro{\ang}{90 - (\i-1)*36}
+      \draw[gray] ($(p\i)+(-0.19,-0.19)$) -- ($(p\i)+(0.19,0.19)$);
+      \node[gray, font=\tiny] at (\ang:1.8) {\elim};
+    }
+    \node[circle, draw, very thick, fill=projfill,
+          minimum size=4.5mm, inner sep=0pt, font=\scriptsize]
+          at (90-4*36:1.35) {5};
+    \node[font=\footnotesize, align=center] at (0,-2.35)
+      {end: $5$ survives};
+  \end{tikzpicture}
+  \caption{Circular decimation for $n=10$, read left to right; the
+  ellipsis elides the intermediate eliminations of the final lap. Small
+  gray indices give the global elimination order; position $5$ survives,
+  and $J(10) = 5 = (0101)_2$ is the one-bit cyclic shift of
+  $n = 10 = (1010)_2$.}
+  \label{fig:josephus}
+\end{figure}
+% Restore the section anchor so citations after this float record
+% section-level backrefs (not figure.1), keeping "Cited in §…" deduped.
+\makeatletter\let\@currentHref\josephussectionhref\makeatother
+
+Dwell for a moment on what \emph{kind} of fact this is. The problem is
+defined \emph{iteratively}: the survivor is specified as the outcome of
+$n-1$ eliminations performed in order, and the obvious way to compute
+$J(n)$ is to simulate them, one by one, around the circle. The closed
+form abolishes the simulation. The answer is obtained by merely
+\emph{rearranging the bits of the input}---one cyclic shift, no iteration
+at all: a computation that appeared to require $n-1$ sequential steps
+collapses to a single stroke. Nothing in the problem statement promised
+that such a collapse existed; it was simply there, waiting to be noticed.
+
+It will pay immediately to name this operation the way the \SHA{}
+standard does~\citep{FIPS180-4}. For a $w$-bit word $x$ and $0 \le r < w$,
+write
+\[
+  \mathrm{ROTL}^{r}(x), \qquad \mathrm{ROTR}^{r}(x), \qquad \mathrm{SHR}^{r}(x)
+\]
+for the cyclic left rotation, the cyclic right rotation, and the ordinary
+(bit-discarding) right shift of $x$ by $r$ positions. In this notation the
+Josephus law \cref{eq:josephus} is simply
+\[
+  J(n) \;=\; \mathrm{ROTL}^{1}(n),
+\]
+the rotation taken in the $(\lfloor \lg n \rfloor + 1)$-bit window
+that $n$ occupies. The rotation operators are \emph{literal components
+of \SHA{}}. Its round function stirs the state with fixed maps
+$\Sigma_0, \Sigma_1, \sigma_0, \sigma_1$, each an exclusive-or of two
+or three rotations of a $32$-bit word (\cref{sec:roundshape})---the
+survivor map of a circle of $32$ bits, composed with itself in
+threes. The same innocent operation that \emph{creates} the visible
+structure in the Josephus problem is deployed in \SHA{} to
+\emph{destroy} visible structure; and one of the very few theorems
+known about \SHA{}'s internals is a statement about exactly these
+xor-of-rotation maps (\cref{sec:rivest}).
+
+\emph{Innocent discrete processes secretly respect structure}, and the
+structure is usually found empirically---by computing small cases,
+arranging them suggestively, and noticing. The recurrence came first; the
+closed form \cref{eq:josephus} was extracted from data.
+
+The Josephus problem is not a lone curiosity. A whole gallery of famous
+iterative processes collapse the same way, each to a one-line function
+of the binary digits of its input: the Tower of Hanoi, Gray codes, the
+game of Nim, the parity of Pascal's triangle, even---in a sense that
+must be stated carefully---the notorious $3x+1$ map.
+\Cref{app:gallery} collects these specimens, in increasing order of
+discomfort: three where the collapse is total, one (Kummer's carry
+theorem) where the collapse names the central character of this whole
+paper, and one where a collapsing change of coordinates provably
+\emph{exists} and provably \emph{helps not at all}. The moral compounds
+across the gallery: bit operations are not just where these collapses
+land, they are a recurring \emph{language} in which discrete iteration,
+when it is secretly simple, tends to become simple---and
+(\cref{sec:statespace}) they are precisely the alphabet from which
+\SHA{} is built.
+
+This paper is about the mirror image of that phenomenon. The function
+\SHA{}, which we will introduce slowly, is a discrete process on binary
+strings that was \emph{engineered so that no analyst would ever have a
+Josephus moment with it}: no change of representation, no clever
+coordinate system, no generating function is supposed to reveal any
+respected structure whatsoever---even though the function is built from a
+few dozen lines of elementary operations, all of them individually as
+transparent as the decimation rule. \SHA{} too is defined iteratively---a
+fixed round transformation applied sixty-four times, itself chained block
+after block---and the working conjecture is that, unlike the decimation,
+its iteration admits no collapse. Since the entire document is an
+extended commentary on that claim, it is worth displaying once, in the
+form of a conjecture---informal, but falsifiable in every clause:
+
+\begin{conjecture}[the no-collapse conjecture; informal]
+\label{conj:nocollapse}
+No change of representation tames \SHA{}: no bit-shift pattern, no
+closed form, no algorithm of any kind computes it materially faster
+than performing its sixty-four rounds; and no nontrivial property of
+its outputs can be predicted materially more cheaply than by computing
+them.
+\end{conjecture}
+
+\noindent
+Nothing remotely like this is proved, and \cref{sec:worlds} explains
+why a proof is beyond the current reach of mathematics. What is known
+traces the conjecture's boundary. Inward, the few honest theorems about
+the internals say which components, taken alone, are transparent
+(\cref{thm:rivest} is the loveliest); the round-by-round records of
+\cref{sec:siege} measure how far into the iteration analysis currently
+penetrates. Outward, the theory of time-bounded Kolmogorov complexity
+(\cref{sec:liupass}) is the formal home of ``no shortcut exists,'' and
+turns the conjecture's vague ``materially faster'' into exact
+statements. In between lies everything this paper does. Whether the
+engineers succeeded is, remarkably, not a settled question but an
+empirical one, now running as an uncontrolled worldwide experiment for
+a quarter of a century. Making parts of that experiment controlled,
+small, and measurable is the research program of this note.

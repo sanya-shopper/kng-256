@@ -1,0 +1,615 @@
+% ============================================================
+% references.bib — SHA-256 prospectus
+% Convention: every entry's `note` field records whether a
+% legitimately free PDF is archived in refs/ (see refs/README.md
+% for provenance), or where the work must otherwise be obtained.
+% ============================================================
+
+% ---------- Opening: patterns in binary representations ----------
+
+@book{GKP1994,
+  author    = {Ronald L. Graham and Donald E. Knuth and Oren Patashnik},
+  title     = {Concrete Mathematics: A Foundation for Computer Science},
+  edition   = {Second},
+  publisher = {Addison-Wesley},
+  address   = {Reading, MA},
+  year      = {1994},
+  isbn      = {978-0-201-55802-9},
+  note      = {No free copy exists; obtain via library. The Josephus problem opens \S 1.1.}
+}
+
+@book{Knuth1997,
+  author    = {Donald E. Knuth},
+  title     = {The Art of Computer Programming, Volume 2: Seminumerical Algorithms},
+  edition   = {Third},
+  publisher = {Addison-Wesley},
+  address   = {Reading, MA},
+  year      = {1997},
+  isbn      = {978-0-201-89684-8},
+  note      = {No free copy exists; obtain via library. Chapter 3 is the classical treatment of random-number testing.}
+}
+
+% ---------- Prehistory: hashing, one-wayness ----------
+
+@article{Peterson1957,
+  author  = {W. Wesley Peterson},
+  title   = {Addressing for Random-Access Storage},
+  journal = {IBM Journal of Research and Development},
+  volume  = {1},
+  number  = {2},
+  pages   = {130--146},
+  year    = {1957},
+  doi     = {10.1147/rd.12.0130},
+  note    = {No free copy found; obtain via library.}
+}
+
+@book{Knuth1998,
+  author    = {Donald E. Knuth},
+  title     = {The Art of Computer Programming, Volume 3: Sorting and Searching},
+  edition   = {Second},
+  publisher = {Addison-Wesley},
+  address   = {Reading, MA},
+  year      = {1998},
+  isbn      = {978-0-201-89685-5},
+  note      = {No free copy exists; obtain via library. \S 6.4 treats hashing, with its history.}
+}
+
+@article{Purdy1974,
+  author  = {George B. Purdy},
+  title   = {A High Security Log-in Procedure},
+  journal = {Communications of the ACM},
+  volume  = {17},
+  number  = {8},
+  pages   = {442--445},
+  year    = {1974},
+  doi     = {10.1145/361082.361089},
+  note    = {Open access in the ACM Digital Library backfile (automated download blocked; not archived).}
+}
+
+@article{MorrisThompson1979,
+  author  = {Robert Morris and Ken Thompson},
+  title   = {Password Security: A Case History},
+  journal = {Communications of the ACM},
+  volume  = {22},
+  number  = {11},
+  pages   = {594--597},
+  year    = {1979},
+  doi     = {10.1145/359168.359172},
+  note    = {Open access in the ACM Digital Library backfile (automated download blocked; not archived).}
+}
+
+@article{DiffieHellman1976,
+  author  = {Whitfield Diffie and Martin E. Hellman},
+  title   = {New Directions in Cryptography},
+  journal = {IEEE Transactions on Information Theory},
+  volume  = {22},
+  number  = {6},
+  pages   = {644--654},
+  year    = {1976},
+  doi     = {10.1109/TIT.1976.1055638},
+  note    = {PDF archived as \localpdf{diffie-hellman-1976-new-directions.pdf}.}
+}
+
+@phdthesis{Merkle1979,
+  author = {Ralph C. Merkle},
+  title  = {Secrecy, Authentication, and Public Key Systems},
+  school = {Stanford University},
+  year   = {1979},
+  note   = {PDF archived as \localpdf{merkle-1979-thesis.pdf}.}
+}
+
+% ---------- History of the hash-function family ----------
+
+@misc{FIPS180-4,
+  author       = {{National Institute of Standards and Technology}},
+  title        = {Secure Hash Standard ({SHS})},
+  howpublished = {Federal Information Processing Standards Publication 180-4},
+  year         = {2015},
+  doi          = {10.6028/NIST.FIPS.180-4},
+  note         = {PDF archived as \localpdf{nist-2015-fips-180-4.pdf}.}
+}
+
+@misc{FIPS180-1,
+  author       = {{National Institute of Standards and Technology}},
+  title        = {Secure Hash Standard},
+  howpublished = {Federal Information Processing Standards Publication 180-1},
+  year         = {1995},
+  note         = {Supersedes FIPS 180 (1993). PDF archived as \localpdf{nist-1995-fips-180-1.pdf}.}
+}
+
+@inproceedings{ChabaudJoux1998,
+  author    = {Florent Chabaud and Antoine Joux},
+  title     = {Differential Collisions in {SHA-0}},
+  booktitle = {Advances in Cryptology --- CRYPTO~'98},
+  series    = {Lecture Notes in Computer Science},
+  volume    = {1462},
+  pages     = {56--71},
+  publisher = {Springer},
+  year      = {1998},
+  doi       = {10.1007/BFb0055720},
+  note      = {PDF archived as \localpdf{chabaud-joux-1998-sha0-differential.pdf}.}
+}
+
+@inproceedings{BihamChen2005,
+  author    = {Eli Biham and Rafi Chen and Antoine Joux and Patrick Carribault and Christophe Lemuet and William Jalby},
+  title     = {Collisions of {SHA-0} and Reduced {SHA-1}},
+  booktitle = {Advances in Cryptology --- EUROCRYPT 2005},
+  series    = {Lecture Notes in Computer Science},
+  volume    = {3494},
+  pages     = {36--57},
+  publisher = {Springer},
+  year      = {2005},
+  doi       = {10.1007/11426639_3},
+  note      = {PDF archived as \localpdf{biham-chen-joux-2005-sha0-collisions.pdf}.}
+}
+
+@misc{WikipediaSHA2,
+  author       = {{Wikipedia contributors}},
+  title        = {{SHA-2}},
+  howpublished = {Wikipedia, The Free Encyclopedia},
+  year         = {2026},
+  url          = {https://en.wikipedia.org/wiki/SHA-2},
+  note         = {Accessed July 16, 2026; snapshot archived as \localpdf{wikipedia-sha2-snapshot.pdf}.}
+}
+
+@misc{RFC1321,
+  author       = {Ronald L. Rivest},
+  title        = {The {MD5} Message-Digest Algorithm},
+  howpublished = {RFC 1321, Internet Engineering Task Force},
+  year         = {1992},
+  url          = {https://www.rfc-editor.org/rfc/rfc1321},
+  note         = {PDF (rendered from the official text) archived as \localpdf{rivest-1992-rfc1321-md5.pdf}.}
+}
+
+@inproceedings{Merkle1988,
+  author    = {Ralph C. Merkle},
+  title     = {A Digital Signature Based on a Conventional Encryption Function},
+  booktitle = {Advances in Cryptology --- CRYPTO~'87},
+  series    = {Lecture Notes in Computer Science},
+  volume    = {293},
+  pages     = {369--378},
+  publisher = {Springer},
+  year      = {1988},
+  doi       = {10.1007/3-540-48184-2_32},
+  note      = {PDF archived as \localpdf{merkle-1988-tree-signature.pdf}.}
+}
+
+@inproceedings{Merkle1989,
+  author    = {Ralph C. Merkle},
+  title     = {A Certified Digital Signature},
+  booktitle = {Advances in Cryptology --- CRYPTO~'89},
+  series    = {Lecture Notes in Computer Science},
+  volume    = {435},
+  pages     = {218--238},
+  publisher = {Springer},
+  year      = {1990},
+  doi       = {10.1007/0-387-34805-0_21},
+  note      = {PDF archived as \localpdf{merkle-1989-certified-digital-signature.pdf}.}
+}
+
+@inproceedings{MerkleOWHF1989,
+  author    = {Ralph C. Merkle},
+  title     = {One Way Hash Functions and {DES}},
+  booktitle = {Advances in Cryptology --- CRYPTO~'89},
+  series    = {Lecture Notes in Computer Science},
+  volume    = {435},
+  pages     = {428--446},
+  publisher = {Springer},
+  year      = {1990},
+  doi       = {10.1007/0-387-34805-0_40},
+  note      = {PDF archived as \localpdf{merkle-1989-one-way-hash-des.pdf}.}
+}
+
+@inproceedings{Damgard1989,
+  author    = {Ivan Damg{\aa}rd},
+  title     = {A Design Principle for Hash Functions},
+  booktitle = {Advances in Cryptology --- CRYPTO~'89},
+  series    = {Lecture Notes in Computer Science},
+  volume    = {435},
+  pages     = {416--427},
+  publisher = {Springer},
+  year      = {1990},
+  doi       = {10.1007/0-387-34805-0_39},
+  note      = {PDF archived as \localpdf{damgard-1989-design-principle.pdf}.}
+}
+
+@inproceedings{WangYu2005,
+  author    = {Xiaoyun Wang and Hongbo Yu},
+  title     = {How to Break {MD5} and Other Hash Functions},
+  booktitle = {Advances in Cryptology --- EUROCRYPT 2005},
+  series    = {Lecture Notes in Computer Science},
+  volume    = {3494},
+  pages     = {19--35},
+  publisher = {Springer},
+  year      = {2005},
+  doi       = {10.1007/11426639_2},
+  note      = {PDF archived as \localpdf{wang-yu-2005-break-md5.pdf}.}
+}
+
+@inproceedings{WangYinYu2005,
+  author    = {Xiaoyun Wang and Yiqun Lisa Yin and Hongbo Yu},
+  title     = {Finding Collisions in the Full {SHA-1}},
+  booktitle = {Advances in Cryptology --- CRYPTO 2005},
+  series    = {Lecture Notes in Computer Science},
+  volume    = {3621},
+  pages     = {17--36},
+  publisher = {Springer},
+  year      = {2005},
+  doi       = {10.1007/11535218_2},
+  note      = {PDF archived as \localpdf{wang-yin-yu-2005-sha1-collisions.pdf}.}
+}
+
+@inproceedings{Stevens2017,
+  author    = {Marc Stevens and Elie Bursztein and Pierre Karpman and Ange Albertini and Yarik Markov},
+  title     = {The First Collision for Full {SHA-1}},
+  booktitle = {Advances in Cryptology --- CRYPTO 2017, Part~I},
+  series    = {Lecture Notes in Computer Science},
+  volume    = {10401},
+  pages     = {570--596},
+  publisher = {Springer},
+  year      = {2017},
+  doi       = {10.1007/978-3-319-63688-7_19},
+  note      = {PDF archived as \localpdf{stevens-2017-shattered-sha1.pdf}.}
+}
+
+@inproceedings{Dadda2004,
+  author    = {Luigi Dadda and Marco Macchetti and Jeff Owen},
+  title     = {The Design of a High Speed {ASIC} Unit for the Hash Function {SHA-256} (384, 512)},
+  booktitle = {Proceedings of the Design, Automation and Test in Europe Conference (DATE 2004), Designers' Forum},
+  pages     = {70--75},
+  publisher = {IEEE},
+  year      = {2004},
+  url       = {https://past.date-conference.com/proceedings-archive/2004/DATE04/DF_FILES/04D_5.PDF},
+  note      = {PDF archived as \localpdf{dadda-macchetti-owen-2004-sha256-asic.pdf}.}
+}
+
+@article{Taylor2017,
+  author  = {Michael Bedford Taylor},
+  title   = {The Evolution of Bitcoin Hardware},
+  journal = {IEEE Computer},
+  volume  = {50},
+  number  = {9},
+  pages   = {58--66},
+  year    = {2017},
+  doi     = {10.1109/MC.2017.3571056},
+  note    = {Author's version archived as \localpdf{taylor-2017-bitcoin-hardware.pdf}.}
+}
+
+% ---------- Uses ----------
+
+@inproceedings{BCK1996,
+  author    = {Mihir Bellare and Ran Canetti and Hugo Krawczyk},
+  title     = {Keying Hash Functions for Message Authentication},
+  booktitle = {Advances in Cryptology --- CRYPTO~'96},
+  series    = {Lecture Notes in Computer Science},
+  volume    = {1109},
+  pages     = {1--15},
+  publisher = {Springer},
+  year      = {1996},
+  doi       = {10.1007/3-540-68697-5_1},
+  note      = {Authors' full version archived as \localpdf{bellare-canetti-krawczyk-1996-hmac.pdf}.}
+}
+
+@article{GMR1989,
+  author  = {Shafi Goldwasser and Silvio Micali and Charles Rackoff},
+  title   = {The Knowledge Complexity of Interactive Proof Systems},
+  journal = {SIAM Journal on Computing},
+  volume  = {18},
+  number  = {1},
+  pages   = {186--208},
+  year    = {1989},
+  doi     = {10.1137/0218012},
+  note    = {Scanned {SIAM} version (no text layer) archived as \localpdf{goldwasser-micali-rackoff-1989-knowledge-complexity.pdf}.}
+}
+
+@misc{BenSasson2018,
+  author       = {Eli Ben-Sasson and Iddo Bentov and Yinon Horesh and Michael Riabzev},
+  title        = {Scalable, Transparent, and Post-Quantum Secure Computational Integrity},
+  howpublished = {Cryptology ePrint Archive, Paper 2018/046},
+  year         = {2018},
+  url          = {https://eprint.iacr.org/2018/046},
+  note         = {PDF archived as \localpdf{bensasson-bentov-horesh-riabzev-2018-stark.pdf}.}
+}
+
+@misc{Nakamoto2008,
+  author       = {Satoshi Nakamoto},
+  title        = {Bitcoin: A Peer-to-Peer Electronic Cash System},
+  howpublished = {White paper},
+  year         = {2008},
+  url          = {https://bitcoin.org/bitcoin.pdf},
+  note         = {PDF archived as \localpdf{nakamoto-2008-bitcoin.pdf}.}
+}
+
+@book{MenezesOorschotVanstone1996,
+  author    = {Alfred J. Menezes and Paul C. van Oorschot and Scott A. Vanstone},
+  title     = {Handbook of Applied Cryptography},
+  publisher = {CRC Press},
+  address   = {Boca Raton, FL},
+  year      = {1996},
+  isbn      = {978-0-8493-8523-0},
+  url       = {https://cacr.uwaterloo.ca/hac/},
+  note      = {Chapter PDFs freely distributed by the authors with publisher permission; Chapter~9 (hash functions) archived as \localpdf{menezes-vanoorschot-vanstone-1996-hac-chap9.pdf}.}
+}
+
+@inproceedings{BellareKohno2004,
+  author    = {Mihir Bellare and Tadayoshi Kohno},
+  title     = {Hash Function Balance and Its Impact on Birthday Attacks},
+  booktitle = {Advances in Cryptology --- EUROCRYPT 2004},
+  series    = {Lecture Notes in Computer Science},
+  volume    = {3027},
+  pages     = {401--418},
+  publisher = {Springer},
+  year      = {2004},
+  doi       = {10.1007/978-3-540-24676-3_24},
+  note      = {Authors' full version archived as \localpdf{bellare-kohno-2004-hash-balance.pdf}.}
+}
+
+% ---------- Random mappings / analytic combinatorics ----------
+
+@inproceedings{FlajoletOdlyzko1990,
+  author    = {Philippe Flajolet and Andrew M. Odlyzko},
+  title     = {Random Mapping Statistics},
+  booktitle = {Advances in Cryptology --- EUROCRYPT~'89},
+  series    = {Lecture Notes in Computer Science},
+  volume    = {434},
+  pages     = {329--354},
+  publisher = {Springer},
+  year      = {1990},
+  doi       = {10.1007/3-540-46885-4_34},
+  note      = {PDF archived as \localpdf{flajolet-odlyzko-1990-random-mapping-statistics.pdf}.}
+}
+
+@book{FlajoletSedgewick2009,
+  author    = {Philippe Flajolet and Robert Sedgewick},
+  title     = {Analytic Combinatorics},
+  publisher = {Cambridge University Press},
+  address   = {Cambridge},
+  year      = {2009},
+  isbn      = {978-0-521-89806-5},
+  url       = {https://ac.cs.princeton.edu/home/},
+  note      = {Full text freely available from the authors; archived as \localpdf{flajolet-sedgewick-2009-analytic-combinatorics.pdf}.}
+}
+
+@article{Harris1960,
+  author  = {Bernard Harris},
+  title   = {Probability Distributions Related to Random Mappings},
+  journal = {The Annals of Mathematical Statistics},
+  volume  = {31},
+  number  = {4},
+  pages   = {1045--1062},
+  year    = {1960},
+  doi     = {10.1214/aoms/1177705677},
+  note    = {Open access; PDF archived as \localpdf{harris-1960-random-mappings.pdf}.}
+}
+
+@article{Pollard1978,
+  author  = {John M. Pollard},
+  title   = {Monte {C}arlo Methods for Index Computation $(\mathrm{mod}\ p)$},
+  journal = {Mathematics of Computation},
+  volume  = {32},
+  number  = {143},
+  pages   = {918--924},
+  year    = {1978},
+  doi     = {10.1090/S0025-5718-1978-0491431-9},
+  note    = {Open archive; PDF archived as \localpdf{pollard-1978-monte-carlo-index.pdf}.}
+}
+
+@article{vanOorschotWiener1999,
+  author  = {Paul C. van Oorschot and Michael J. Wiener},
+  title   = {Parallel Collision Search with Cryptanalytic Applications},
+  journal = {Journal of Cryptology},
+  volume  = {12},
+  number  = {1},
+  pages   = {1--28},
+  year    = {1999},
+  doi     = {10.1007/PL00003816},
+  note    = {Authors' full version archived as \localpdf{vanoorschot-wiener-1999-parallel-collision-search.pdf}.}
+}
+
+% ---------- 2-adic / algebraic view of ARX ----------
+
+@inproceedings{KlimovShamir2003,
+  author    = {Alexander Klimov and Adi Shamir},
+  title     = {A New Class of Invertible Mappings},
+  booktitle = {Cryptographic Hardware and Embedded Systems --- CHES 2002},
+  series    = {Lecture Notes in Computer Science},
+  volume    = {2523},
+  pages     = {470--483},
+  publisher = {Springer},
+  year      = {2003},
+  doi       = {10.1007/3-540-36400-5_34},
+  note      = {PDF archived as \localpdf{klimov-shamir-2002-invertible-mappings.pdf}.}
+}
+
+@inproceedings{Anashin2006,
+  author    = {Vladimir Anashin},
+  title     = {Ergodic Transformations in the Space of $p$-adic Integers},
+  booktitle = {$p$-adic Mathematical Physics: 2nd International Conference},
+  series    = {AIP Conference Proceedings},
+  volume    = {826},
+  pages     = {3--24},
+  publisher = {American Institute of Physics},
+  year      = {2006},
+  doi       = {10.1063/1.2193107},
+  note      = {arXiv preprint math/0602083 archived as \localpdf{anashin-2006-ergodic-transformations-padic.pdf}.}
+}
+
+@article{Rivest2011,
+  author  = {Ronald L. Rivest},
+  title   = {The Invertibility of the {XOR} of Rotations of a Binary Word},
+  journal = {International Journal of Computer Mathematics},
+  volume  = {88},
+  number  = {2},
+  pages   = {281--284},
+  year    = {2011},
+  doi     = {10.1080/00207161003596708},
+  note    = {Author's prepublication version archived as \localpdf{rivest-2011-xor-rotations-invertibility.pdf}.}
+}
+
+% ---------- Frameworks: pseudorandomness, models, testing ----------
+
+@inproceedings{Yao1982,
+  author    = {Andrew C. Yao},
+  title     = {Theory and Applications of Trapdoor Functions},
+  booktitle = {23rd Annual Symposium on Foundations of Computer Science (FOCS 1982)},
+  pages     = {80--91},
+  publisher = {IEEE},
+  year      = {1982},
+  doi       = {10.1109/SFCS.1982.45},
+  note      = {No free copy found; obtain via library.}
+}
+
+@book{Goldreich2001,
+  author    = {Oded Goldreich},
+  title     = {Foundations of Cryptography, Volume 1: Basic Tools},
+  publisher = {Cambridge University Press},
+  address   = {Cambridge},
+  year      = {2001},
+  isbn      = {978-0-521-79172-3},
+  url       = {https://www.wisdom.weizmann.ac.il/~oded/frag.html},
+  note      = {Distinguishers and pseudorandomness are Chapter~3; the author's freely posted working draft of that chapter is archived as \localpdf{goldreich-1995-foundations-draft-ch3.pdf}.}
+}
+
+@article{GGM1986,
+  author  = {Oded Goldreich and Shafi Goldwasser and Silvio Micali},
+  title   = {How to Construct Random Functions},
+  journal = {Journal of the ACM},
+  volume  = {33},
+  number  = {4},
+  pages   = {792--807},
+  year    = {1986},
+  doi     = {10.1145/6490.6503},
+  note    = {Scanned {JACM} version archived as \localpdf{goldreich-goldwasser-micali-1986-random-functions.pdf}.}
+}
+
+@inproceedings{BellareRogaway1993,
+  author    = {Mihir Bellare and Phillip Rogaway},
+  title     = {Random Oracles are Practical: A Paradigm for Designing Efficient Protocols},
+  booktitle = {Proceedings of the 1st ACM Conference on Computer and Communications Security (CCS~'93)},
+  pages     = {62--73},
+  publisher = {ACM},
+  year      = {1993},
+  doi       = {10.1145/168588.168596},
+  note      = {Authors' full version archived as \localpdf{bellare-rogaway-1993-random-oracles.pdf}.}
+}
+
+@inproceedings{MRH2004,
+  author    = {Ueli Maurer and Renato Renner and Clemens Holenstein},
+  title     = {Indifferentiability, Impossibility Results on Reductions, and Applications to the Random Oracle Methodology},
+  booktitle = {Theory of Cryptography (TCC 2004)},
+  series    = {Lecture Notes in Computer Science},
+  volume    = {2951},
+  pages     = {21--39},
+  publisher = {Springer},
+  year      = {2004},
+  doi       = {10.1007/978-3-540-24638-1_2},
+  note      = {Authors' version archived as \localpdf{maurer-renner-holenstein-2004-indifferentiability.pdf}.}
+}
+
+@inproceedings{CDMP2005,
+  author    = {Jean-S{\'e}bastien Coron and Yevgeniy Dodis and C{\'e}cile Malinaud and Prashant Puniya},
+  title     = {Merkle-Damg{\aa}rd Revisited: How to Construct a Hash Function},
+  booktitle = {Advances in Cryptology --- CRYPTO 2005},
+  series    = {Lecture Notes in Computer Science},
+  volume    = {3621},
+  pages     = {430--448},
+  publisher = {Springer},
+  year      = {2005},
+  doi       = {10.1007/11535218_26},
+  note      = {Authors' full version archived as \localpdf{coron-dodis-malinaud-puniya-2005-md-revisited.pdf}.}
+}
+
+@inproceedings{Rogaway2006,
+  author    = {Phillip Rogaway},
+  title     = {Formalizing Human Ignorance: Collision-Resistant Hashing without the Keys},
+  booktitle = {Progress in Cryptology --- VIETCRYPT 2006},
+  series    = {Lecture Notes in Computer Science},
+  volume    = {4341},
+  pages     = {211--228},
+  publisher = {Springer},
+  year      = {2006},
+  doi       = {10.1007/11958239_14},
+  note      = {Author's version archived as \localpdf{rogaway-2006-human-ignorance.pdf}.}
+}
+
+@inproceedings{RogawayShrimpton2004,
+  author    = {Phillip Rogaway and Thomas Shrimpton},
+  title     = {Cryptographic Hash-Function Basics: Definitions, Implications, and Separations for Preimage Resistance, Second-Preimage Resistance, and Collision Resistance},
+  booktitle = {Fast Software Encryption (FSE 2004)},
+  series    = {Lecture Notes in Computer Science},
+  volume    = {3017},
+  pages     = {371--388},
+  publisher = {Springer},
+  year      = {2004},
+  doi       = {10.1007/978-3-540-25937-4_24},
+  note      = {Authors' full version archived as \localpdf{rogaway-shrimpton-2004-hash-basics.pdf}.}
+}
+
+@inproceedings{Impagliazzo1995,
+  author    = {Russell Impagliazzo},
+  title     = {A Personal View of Average-Case Complexity},
+  booktitle = {Proceedings of the 10th Annual Structure in Complexity Theory Conference},
+  pages     = {134--147},
+  publisher = {IEEE},
+  year      = {1995},
+  doi       = {10.1109/SCT.1995.514853},
+  note      = {Author's version archived as \localpdf{impagliazzo-1995-five-worlds.pdf}.}
+}
+
+@article{LEcuyerSimard2007,
+  author  = {Pierre L'Ecuyer and Richard Simard},
+  title   = {{TestU01}: A {C} Library for Empirical Testing of Random Number Generators},
+  journal = {ACM Transactions on Mathematical Software},
+  volume  = {33},
+  number  = {4},
+  pages   = {22:1--22:40},
+  year    = {2007},
+  doi     = {10.1145/1268776.1268777},
+  note    = {Authors' version archived as \localpdf{lecuyer-simard-2007-testu01.pdf}.}
+}
+
+@misc{NIST2010,
+  author       = {Andrew Rukhin and Juan Soto and James Nechvatal and Miles Smid and Elaine Barker and Stefan Leigh and Mark Levenson and Mark Vangel and David Banks and Alan Heckert and James Dray and San Vo},
+  title        = {A Statistical Test Suite for Random and Pseudorandom Number Generators for Cryptographic Applications},
+  howpublished = {NIST Special Publication 800-22, Revision 1a},
+  year         = {2010},
+  doi          = {10.6028/NIST.SP.800-22r1a},
+  note         = {PDF archived as \localpdf{nist-2010-sp800-22r1a.pdf}.}
+}
+
+% ---------- Cryptanalytic state of the art on SHA-2 ----------
+
+@inproceedings{MendelNadSchlaffer2013,
+  author    = {Florian Mendel and Tomislav Nad and Martin Schl{\"a}ffer},
+  title     = {Improving Local Collisions: New Attacks on Reduced {SHA-256}},
+  booktitle = {Advances in Cryptology --- EUROCRYPT 2013},
+  series    = {Lecture Notes in Computer Science},
+  volume    = {7881},
+  pages     = {262--278},
+  publisher = {Springer},
+  year      = {2013},
+  doi       = {10.1007/978-3-642-38348-9_16},
+  note      = {Authors' version archived as \localpdf{mendel-nad-schlaffer-2013-sha256-local-collisions.pdf}.}
+}
+
+@inproceedings{KRS2012,
+  author    = {Dmitry Khovratovich and Christian Rechberger and Alexandra Savelieva},
+  title     = {Bicliques for Preimages: Attacks on {Skein-512} and the {SHA-2} Family},
+  booktitle = {Fast Software Encryption (FSE 2012)},
+  series    = {Lecture Notes in Computer Science},
+  volume    = {7549},
+  pages     = {244--263},
+  publisher = {Springer},
+  year      = {2012},
+  doi       = {10.1007/978-3-642-34047-5_15},
+  note      = {PDF archived as \localpdf{khovratovich-rechberger-savelieva-2012-bicliques.pdf}.}
+}
+
+@misc{BDPV2007,
+  author       = {Guido Bertoni and Joan Daemen and Micha{\"e}l Peeters and Gilles {Van Assche}},
+  title        = {Sponge Functions},
+  howpublished = {ECRYPT Hash Workshop},
+  year         = {2007},
+  url          = {https://keccak.team/files/SpongeFunctions.pdf},
+  note         = {PDF archived as \localpdf{bertoni-daemen-peeters-vanassche-2007-sponge.pdf}.}
+}

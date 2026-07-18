@@ -1,0 +1,16 @@
+# LaTeX build artifacts (latexmk regenerates all of these)
+*.aux
+*.log
+*.out
+*.toc
+*.brf
+*.bbl
+*.blg
+*.fls
+*.fdb_latexmk
+main.pdf
+
+# editor droppings
+*~
+\#*\#
+.DS_Store

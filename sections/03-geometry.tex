@@ -1,0 +1,908 @@
+% ------------------------------------------------------------
+% §3  The construction and its finite geometry
+% ------------------------------------------------------------
+\section{Anatomy: a self-map of a finite space}\label{sec:geometry}
+
+We now open the organism. The dissection has two stages, and only the
+second is specific to \SHA{}: first a completely general---and genuinely
+theoretical---reduction of ``hash anything'' to ``iterate one map on a
+finite space''; then the finite space itself and the map that \SHA{}
+iterates on it.
+
+\subsection{From arbitrary bit strings to one finite map}
+\label{sec:merkledamgard}
+
+A function on $\bigcup_{\ell < 2^{64}} \bitstrings^\ell$ looks
+unwieldy---its domain is (for practical purposes) infinite and
+ragged. The first structural fact about \SHA{} is that all of this
+unwieldiness is handled by a single, provably safe reduction, the
+\emph{Merkle--Damg{\aa}rd construction}, and that everything interesting
+then happens on a finite set.
+
+\paragraph{Padding.} A message $m$ of bit length $\ell$ (any $\ell$,
+including $0$; bits, not bytes) is padded by appending a single
+$\mathsf{1}$ bit, then the minimum number of $\mathsf{0}$ bits, then the
+number $\ell$ written as a $64$-bit integer, so that the total length is a
+multiple of $512$. The padded message splits into $512$-bit blocks
+$m_1, \dots, m_k$ (\cref{fig:padding}). Padding is where ``arbitrary bit
+length'' lives: the map
+\[
+  \mathrm{pad} : \bigcup_{\ell < 2^{64}} \bitstrings^{\ell}
+  \;\longrightarrow\; \bigl(\bitstrings^{512}\bigr)^{+}
+\]
+is injective (the appended $\mathsf{1}$ and the length field between them
+guarantee it), and encoding the \emph{length} in the final block---so-called
+Merkle--Damg{\aa}rd strengthening---is not bookkeeping but the hypothesis
+that makes \cref{thm:md} below true.
+
+\begin{figure}[ht]
+  \centering
+  \begin{tikzpicture}[font=\small, >={Stealth[length=1.8mm]}]
+    % ---- the linear message ----
+    \draw[fill=msgfill] (0,2.2) rectangle (9.03,2.8);
+    \draw (3.7,2.2) -- (3.7,2.8);
+    \draw (7.4,2.2) -- (7.4,2.8);
+    \node at (1.85,2.5)  {\textsf{A}};
+    \node at (5.55,2.5)  {\textsf{B}};
+    \node at (8.21,2.5)  {\textsf{C}};
+    \node[anchor=west] at (9.25,2.5) {message $m$, $\ell$ bits};
+    % ---- guide lines: where each portion lands ----
+    \draw[dashed, gray] (0,2.2)    -- (0,0.62);
+    \draw[dashed, gray] (3.7,2.2)  -- (3.95,0.62);
+    \draw[dashed, gray] (7.4,2.2)  -- (7.9,0.62);
+    \draw[dashed, gray] (9.03,2.2) -- (9.53,0.62);
+    % ---- the 512-bit blocks ----
+    \draw[fill=msgfill] (0,0)    rectangle (3.7,0.6);
+    \draw[fill=msgfill] (3.95,0) rectangle (7.65,0.6);
+    \node at (1.85,0.3) {\textsf{A}};
+    \node at (5.8,0.3)  {\textsf{B}};
+    % final block: tail of m | pad bit 1 | 0...0 | length
+    \draw[fill=msgfill]  (7.9,0)   rectangle (9.25,0.6);
+    \draw[fill=padfill]  (9.25,0)  rectangle (9.75,0.6);
+    \draw[fill=black!8]  (9.75,0)  rectangle (10.85,0.6);
+    \draw[fill=lenfill]  (10.85,0) rectangle (11.6,0.6);
+    \draw (7.9,0) rectangle (11.6,0.6);
+    \node at (8.575,0.3) {\textsf{C}};
+    \node[font=\bfseries] at (9.5,0.3) {$\mathsf{1}$};
+    \node at (10.3,0.3)  {$\mathsf{0}\cdots\mathsf{0}$};
+    \node at (11.22,0.3) {$\langle \ell \rangle$};
+    % pad bit and zero-fill annotations (staggered to avoid collision)
+    \node[font=\scriptsize, align=center] (onebit) at (8.15,1.7)
+      {single pad bit $\mathsf{1}$\\ \tiny(mandatory: exactly one, always
+       present, marks end of message)};
+    \draw[->, thin] (onebit.south) .. controls (8.9,1.15) .. (9.5,0.63);
+    \node[font=\scriptsize, align=center] (zeros) at (10.9,1.15)
+      {zero fill\\ \tiny($k$ zeros, $0\le k\le 511$; \emph{possibly none})};
+    \draw[->, thin] (zeros.south west) -- (10.3,0.63);
+    % ---- block names and sizes ----
+    \node at (1.85,-0.33) {$m_1$};
+    \node at (5.8,-0.33)  {$m_2$};
+    \node at (9.4,-0.33) {$m_3$};
+    \draw[decorate, decoration={brace, mirror, amplitude=4pt}]
+      (0,-0.62) -- (3.7,-0.62)
+      node[midway, below=5pt, font=\scriptsize] {512 bits};
+    \draw[decorate, decoration={brace, mirror, amplitude=3pt}]
+      (10.85,-0.08) -- (11.6,-0.08)
+      node[midway, below=4pt, font=\scriptsize, align=center]
+      {$64$ bits:\\bit length $\ell$};
+  \end{tikzpicture}
+  \caption{Padding and blocking, for a message needing $k=3$ blocks. The
+  linear message (blue; portions \textsf{A}, \textsf{B}, \textsf{C})
+  is consumed left to right by $512$-bit blocks. The final block is
+  completed by a single $\mathsf{1}$ bit (green), a run of $\mathsf{0}$s,
+  and the $64$-bit binary encoding of the message length $\ell$
+  (orange)---the Merkle--Damg{\aa}rd strengthening. The rule is exact and
+  admits no options: to a message of $\ell$ bits one \emph{always} appends
+  one $\mathsf{1}$, then the fewest $\mathsf{0}$s (possibly none) so that
+  the total reaches a multiple of $512$ once the $64$-bit length is
+  affixed---i.e.\ $k$ is the least $\ge 0$ solution of
+  $\ell + 1 + k + 64 \equiv 0 \pmod{512}$. The $\mathsf{1}$ bit and the
+  length field are never omitted; only the zero-count $k$ depends on
+  $\ell$, and if the tail \textsf{C} leaves no room for the $65$ closing
+  bits, $k$ simply runs on into an extra all-padding block.}
+  \label{fig:padding}
+\end{figure}
+
+\paragraph{Chaining.} All real work is delegated to one
+\emph{compression function}
+\[
+  f : \State \times \bitstrings^{512} \longrightarrow \State,
+  \qquad \State = (\Ztwo)^8 ,
+\]
+which eats a $512$-bit block and updates a point of the finite space
+$\State$ (about which everything in \cref{sec:statespace}). Fix a public
+starting point $h_0 = \mathrm{IV} \in \State$ and set
+\[
+  h_i = f(h_{i-1}, m_i), \qquad \SHA(m) = h_k ,
+\]
+reading the final state out as $256$ bits (\cref{fig:md}).
+
+\begin{figure}[ht]
+  \centering
+  \begin{tikzpicture}[
+      node distance=9mm,
+      blk/.style={draw, minimum width=13mm, minimum height=7mm, font=\small},
+      f/.style={draw, fill=projfill, minimum size=8mm, font=\small},
+      >={Stealth[length=2mm]}]
+    \node[f] (f1) {$f$};
+    \node[f, right=16mm of f1] (f2) {$f$};
+    \node[right=10mm of f2, font=\small] (dots) {$\cdots$};
+    \node[f, right=10mm of dots] (f3) {$f$};
+    \node[blk, above=7mm of f1] (m1) {$m_1$};
+    \node[blk, above=7mm of f2] (m2) {$m_2$};
+    \node[blk, above=7mm of f3, fill=black!8] (m3) {$m_k$};
+    \node[left=9mm of f1, font=\small] (iv) {$\mathrm{IV}$};
+    \node[right=9mm of f3, font=\small] (out) {$\SHA(m)$};
+    \draw[->] (iv) -- (f1);
+    \draw[->] (f1) -- node[below, font=\scriptsize]{$h_1$} (f2);
+    \draw[->] (f2) -- (dots);
+    \draw[->] (dots) -- node[below, font=\scriptsize]{$h_{k-1}$} (f3);
+    \draw[->] (f3) -- (out);
+    \draw[->] (m1) -- (f1);
+    \draw[->] (m2) -- (f2);
+    \draw[->] (m3) -- (f3);
+    \node[above=1mm of m3, font=\scriptsize, align=center]
+      {last block contains\\the bit length $\ell$};
+  \end{tikzpicture}
+  \caption{The Merkle--Damg{\aa}rd construction: an arbitrary-length
+  message is folded through one compression function
+  $f : \State \times \bitstrings^{512} \to \State$ on the finite state
+  space $\State = (\Ztwo)^8$.}
+  \label{fig:md}
+\end{figure}
+
+This is not an ad hoc recipe; it is a construction with a theorem, proved
+independently in 1989 by Damg{\aa}rd---stated and proved as Theorem~3.1
+of~\citet[pp.~419--420]{Damgard1989}---and by Merkle, under the name
+``meta-method,'' in~\citet{MerkleOWHF1989}. Both original papers are
+short, readable, and archived alongside this note; the theorem is exactly
+why the design has been reused by MD5, SHA-1, and SHA-2 alike:
+
+\begin{theorem}[Merkle, Damg{\aa}rd]\label{thm:md}
+Any collision of the iterated hash yields, constructively, a collision of
+the compression function: from $m \ne m'$ with $\SHA(m) = \SHA(m')$ one
+can extract $(h, b) \ne (h', b')$ with $f(h,b) = f(h',b')$.
+\end{theorem}
+
+\begin{proof}[Proof idea]
+Walk the two chains backward from the equal outputs. If the messages have
+different lengths, the final blocks already differ (they encode the
+lengths---this is where strengthening is used) yet map to the same output:
+a collision in $f$. If the lengths agree, compare positions from the end;
+at the last position where the inputs to $f$ differ, the outputs agree,
+again a collision in $f$.
+\end{proof}
+
+The moral: \emph{the arbitrary-length-input problem reduces, with proof,
+to the study of one map on one finite space}. (The domain is itself
+finite---every allowed input is shorter than $2^{64}$ bits---but its
+inputs run through unboundedly many \emph{lengths}, and it is that
+length-variability, not any actual infinity, that the construction tames.)
+The reduction is airtight only for
+collision resistance---the construction leaks other structure, such as the
+famous length-extension property (from the digest $H(m)$ alone, without
+knowing $m$, one can compute $H(m \Vert \mathrm{pad} \Vert m')$; defined
+and dissected in \cref{sec:models}), whose repair spawned its own theory
+(indifferentiability) and whose avoidance shaped
+the post-2000 designs, including the sponge construction underlying
+SHA-3~\citep{BDPV2007}. But it means the rest of this paper may honestly
+focus on the finite object $f$.
+
+\subsection{The state space and its two rival geometries}
+\label{sec:statespace}
+
+The state space is
+\[
+  \State \;=\; (\Ztwo)^{8},
+  \qquad |\State| = 2^{256} :
+\]
+an $8$-dimensional module-like array of $32$-bit words---the
+``$8{\times}32$'' geometry in which the entire life of \SHA{} unfolds. As
+a plain set, $\State$ is also $\Ftwo^{256}$, a $256$-dimensional vector
+space over the two-element field. Everything hinges on the fact that
+\emph{the same underlying set carries two incompatible abelian group
+structures}, both used incessantly:
+\begin{itemize}
+  \item bitwise addition $\shaxor$ (exclusive or): the $\Ftwo$-vector
+  space structure of $\Ftwo^{256}$;
+  \item wordwise addition $\shaplus$ modulo $2^{32}$: the product group
+  structure of $(\Ztwo)^8$, where carries propagate within each word.
+\end{itemize}
+These two structures share the zero element and almost nothing else. A map
+that is linear for $\shaxor$ (a matrix over $\Ftwo$) is, generically,
+maximally nonlinear from the point of view of $\shaplus$, and vice versa;
+the carry chains of integer addition are precisely the terms that
+$\Ftwo$-linear algebra cannot see.
+
+It helps to picture the additive ($\shaplus$) structure literally, as a
+clock (\cref{fig:odometer}). Read the state as an odometer counting
+modulo $2^{256}$: every modular addition advances the needle by some
+amount, and the crucial event is whether it \emph{wraps} past $0$---an
+overflow, a carry out of the top, thrown away by the reduction. That one
+bit of ``did it go around?'' is exactly what $\shaxor$-algebra is blind to
+and what the $2$-adic metric, next, is built to record.
+
+\begin{figure}[ht]
+  \centering
+  \begin{tikzpicture}[font=\small, >={Stealth[length=2mm]}]
+    \def\R{1.75}
+    \draw[thick] (0,0) circle (\R);
+    \fill (90:\R) circle (1.7pt);
+    \node[above=1pt] at (90:\R) {\scriptsize $0 \equiv 2^{256}$};
+    \fill (-90:\R) circle (1.3pt);
+    \node[below=1pt] at (-90:\R) {\scriptsize $2^{255}$};
+    \node[align=center, font=\scriptsize] at (0,0)
+      {state as a\\ counter\\ $\bmod\; 2^{256}$};
+    % arc 1: no wrap (does not cross the top marker at 90)
+    \fill[projframe] (25:\R) circle (1.5pt);
+    \draw[->, thick, projframe] (25:{\R+0.3}) arc (25:-120:{\R+0.3});
+    \node[projframe, font=\scriptsize, align=center] at (-52:{\R+1.25})
+      {$x \shaplus c_1$:\\ stays short of $2^{256}$\\ \emph{no carry}};
+    % arc 2: wraps past the top marker (crosses 90)
+    \fill[citewine] (145:\R) circle (1.5pt);
+    \draw[->, thick, citewine] (145:{\R+0.3}) arc (145:35:{\R+0.3});
+    \node[citewine, font=\scriptsize, align=center] at (130:{\R+1.5})
+      {$x \shaplus c_2$: sweeps\\ past $0$ --- \emph{carry out}\\ (the wrap)};
+  \end{tikzpicture}
+  \caption{Wordwise addition $\shaplus$ as motion on a clock. As an
+  odometer counting mod $2^{256}$, the state advances by each addition;
+  it \emph{wraps} past $0$ exactly when the sum overflows---a carry out of
+  the top bit, discarded by the reduction. Whether a given addition wraps
+  is invisible to $\Ftwo$-linear ($\shaxor$) algebra and is precisely the
+  information the $2$-adic metric records. (The true state is not one
+  circle of $2^{256}$ positions but eight \emph{coupled} clocks of
+  $2^{32}$ each, $(\Ztwo)^8$: the single odometer is the intuition, the
+  product of eight is the reality.) A round is a great many such
+  additions, and iterating \SHA{} (\cref{sec:iterated}) sends the counter
+  wandering---sometimes around the circle, sometimes not.}
+  \label{fig:odometer}
+\end{figure}
+
+There is a third, more analytic way to say this, and it is the one we
+expect resonates with a $p$-adic sensibility. Identify $\Ztwo$ with the
+quotient $\mathbb{Z}_2 / 2^{32}\mathbb{Z}_2$ of the $2$-adic integers.
+Then the basic machine operations sort themselves by how they treat the
+$2$-adic metric (in which two integers are close when they agree in many
+low-order bits):
+\begin{center}
+  \begin{tabular}{@{}lccc@{}}
+    \toprule
+    operation & $\Ftwo$-linear? & $2$-adically $1$-Lipschitz? & where it is ``tame'' \\
+    \midrule
+    $x \shaxor c$, bitwise $\wedge,\vee,\lnot$ & yes ($\shaxor$) / no & yes & both lenses see it \\
+    $x \shaplus c$, \ $x \shaplus y$          & no  & yes & only the $2$-adic lens \\
+    rotation $x \lll r$, shift $x \gg s$       & yes & no  & only the $\Ftwo$ lens \\
+    \bottomrule
+  \end{tabular}
+\end{center}
+Bitwise logic and modular addition are \emph{$1$-Lipschitz} ($2$-adically
+continuous in the strongest sense: output bit $i$ depends only on input
+bits $0,\dots,i$, the triangular or ``causal'' maps); compositions of
+these are the \emph{T-functions} of Klimov and
+Shamir~\citep{KlimovShamir2003}, and there is a genuine ergodic theory,
+due to Anashin, characterizing when such maps act
+measure-preservingly or ergodically on $\mathbb{Z}_2$~\citep{Anashin2006}.
+Rotations, by contrast, are $\Ftwo$-linear but violently discontinuous
+$2$-adically: they let high-order bits influence low-order ones.
+
+The $2$-adic lens is not an ad hoc bookkeeping device; it opens onto a
+genuine subject. Nonarchimedean dynamics---the iteration theory of
+self-maps of $p$-adic disks, opened up by \citet{Lubin1994}---asks
+exactly this paper's kind of question one level of structure up: when
+must the iteration of a $p$-adic map secretly respect algebraic
+structure? Lubin's paper records a suspicion of exactly the Josephus
+flavor---that a noninvertible series commuting with an invertible
+nontorsion one must have a formal group hidden behind it---and its main
+result makes a sharp instance of that suspicion into a theorem
+(\citealp{Lubin1994}, Main Theorem~6.3):
+
+\begin{theorem}[Lubin]\label{thm:lubin}
+Let $o$ be the ring of integers in a finite extension of $\mathbb{Q}_p$,
+with maximal ideal $\mathfrak m$, and let $u, f \in o[[x]]$ be power
+series fixing $0$, with $u$ \emph{invertible} (its linear coefficient
+$u'(0)$ a unit) and $f$ \emph{noninvertible} ($f'(0)\in\mathfrak m$) of
+finite Weierstrass degree $\delta$---the number of zeros $f$ has in the
+open disk, counted with multiplicity. If $u$ and $f$ commute,
+$u\circ f = f\circ u$, then \emph{either} some iterate of $u$ is the
+identity series ($u$ is a root of unity in the group of invertible
+series) \emph{or} $\delta = p^{d}$ for some $d\ge 1$.
+\end{theorem}
+
+The content is rigidity. The only Weierstrass degrees a noninvertible
+map may carry while sharing its orbits with a genuine (nontorsion)
+invertible symmetry are the powers of $p$---and those are precisely the
+degrees of the endomorphisms of a one-dimensional formal group. So bare
+commutation, a purely dynamical hypothesis with no algebra in it, already
+forces the numerical signature of a formal-group skeleton; whether the
+skeleton can ever be truly absent is Lubin's own still-open question.
+
+The phenomenon is visible in miniature over our own ring $\mathbb{Z}_2$
+($p=2$). The noninvertible $f(x) = 4x + x^{2}$---linear coefficient
+$4\in 2\mathbb{Z}_2$, Weierstrass degree $2 = 2^{1}$, a $p$-power on the
+nose---commutes with the invertible $u(x) = 9x + 6x^{2} + x^{3}$ (unit
+linear coefficient $9$), as one checks by expanding
+$u\circ f = f\circ u$ directly. The companion Corollary~3.2.1 of the same
+paper is just as concrete: every zero of $f'$ inside the disk must be a
+zero of some iterate of $f$. Here $f'(x) = 2x + 4$ vanishes at $x=-2$,
+and indeed $f(f(-2)) = f(-4) = 0$. Two lines of arithmetic thus exhibit a
+symmetry ($u$), a forced degree ($2^{1}$), and a forced coincidence among
+the iterates---structure precipitating out of commutation alone, the
+Josephus moral in $p$-adic dress.
+
+How near does this reach \SHA{}? Adjacent, honestly, not overhead.
+\Cref{thm:lubin} governs \emph{analytic} series on the $p$-adic disk,
+whereas \SHA{}'s ARX pieces are merely $1$-Lipschitz T-functions---the
+coarse, non-analytic relatives tabulated above---so the theorem does not
+bind the function on the nose, and Anashin's ergodic theory is what
+survives at that lower regularity~\citep{Anashin2006, KlimovShamir2003}.
+What \emph{does} transfer is the question and its shape: does any
+nontrivial map commute with a (reduced, word-narrowed) \SHA{} component,
+and if one did, would it drag in hidden algebraic structure the way it
+must for analytic series? At toy scale that is a finite, machine-checkable
+hunt---search for a commuting symmetry; find none, and the absence is
+itself a measurement of structurelessness. In this language \SHA{}'s
+designers are in the business of manufacturing $1$-Lipschitz dynamics
+that commute with nothing and hide no formal group, and \cref{thm:lubin}
+is the evidence that, one regularity class up, such structurelessness is
+genuinely hard to achieve by accident.
+
+\SHA{}'s round function is an \emph{ARX} design---Addition, Rotation,
+Xor---and the table explains the acronym's cunning: each primitive is
+transparent in one geometry and wild in the other, and the design
+alternates them so that the composition is wild in both. An analyst who
+adopts $\Ftwo$-linear algebra kills the X's and R's but is left helpless
+against the carries; an analyst who adopts the $2$-adic/T-function lens
+domesticates additions and logic but is destroyed by the rotations. This
+is not an accident of \SHA{}; it is the design principle of the whole ARX
+family. What \emph{is} specific to \SHA{} is the exact schedule of
+alternation, and \cref{sec:falling} showed how much such specifics matter.
+
+\begin{project}{Single operations under the $2$-adic lens}{elementary
+  number theory; curiosity about $p$-adic numbers}{3--4 weeks}
+  Anashin's theory gives clean criteria for when a T-function like
+  $x \mapsto x \shaplus c$ or $x \mapsto x \shaxor c \shaplus (x \wedge d)$
+  is a bijection of $\Ztwo[k]$ for all $k$, and when its iteration visits
+  every residue (ergodicity)~\citep{Anashin2006, KlimovShamir2003}.
+  Verify the criteria experimentally on $8$- and $16$-bit words, visualize
+  orbits, then break the hypotheses with a single rotation and measure
+  what dies. A perfect first encounter with $p$-adic ideas producing
+  visible, computable phenomena.
+\end{project}
+
+\subsection{The compression function, structurally}
+\label{sec:roundshape}
+
+We describe $f$ at the level of shape; the full specification fits on two
+pages of \citet{FIPS180-4} (with an accessible pseudocode rendering
+in~\citealp{WikipediaSHA2}) and is worth reading only after the shape is
+clear. The state is eight words $(a,b,c,d,e,f,g,h)$. The $512$-bit message
+block is first \emph{expanded}: its sixteen words $W_0, \dots, W_{15}$
+are stretched to sixty-four by the recurrence
+\[
+  W_t \;=\; \sigma_1(W_{t-2}) \shaplus W_{t-7} \shaplus
+            \sigma_0(W_{t-15}) \shaplus W_{t-16},
+  \qquad 16 \le t < 64,
+\]
+where $\sigma_0, \sigma_1$ are fixed $\shaxor$-combinations of rotations
+and shifts of a single word ($\Ftwo$-linear), while the additions are
+modular (2-adic). Then sixty-four rounds are applied; round $t$ computes
+\[
+  T_1 = h \shaplus \Sigma_1(e) \shaplus \mathrm{Ch}(e,f,g)
+          \shaplus K_t \shaplus W_t,
+  \qquad
+  T_2 = \Sigma_0(a) \shaplus \mathrm{Maj}(a,b,c),
+\]
+and shifts the state pipeline:
+$(a, \dots, h) \leftarrow
+ (T_1 \shaplus T_2,\; a,\; b,\; c,\; d \shaplus T_1,\; e,\; f,\; g)$.
+Here $\Sigma_0, \Sigma_1$ are again xors of three rotations, and
+\[
+  \mathrm{Ch}(x,y,z) = (x \wedge y) \shaxor (\lnot x \wedge z),
+  \qquad
+  \mathrm{Maj}(x,y,z) = (x \wedge y) \shaxor (x \wedge z) \shaxor (y \wedge z)
+\]
+are bitwise Boolean functions of degree two (``choose'' and ``majority'').
+Finally---a crucial asymmetry called the Davies--Meyer feedforward---the
+input state is added back: the block's net effect is
+$h \mapsto h \shaplus \tilde{f}(h, m)$, which prevents running the rounds
+backward even though each individual round is invertible. This
+feedforward is not a detail but the hinge on which one-wayness turns, and
+it is one of the two places where \SHA{}'s architecture carries a genuine
+theorem; we return to it in \cref{sec:constructions}.
+
+\Cref{fig:schedule} traces how a single block's data reaches every one of
+the sixty-four rounds. The block supplies only the first sixteen schedule
+words; the recurrence then \emph{stretches} those seeds forward, each new
+word reaching back to four earlier ones, until all sixty-four exist---so a
+bit set in the incoming block propagates, through the schedule alone,
+into arbitrarily late rounds. Each round $t$ then draws exactly two
+external inputs, its schedule word $W_t$ and its constant $K_t$, and folds
+them into the running eight-word state; everything else in the round is
+internal feedback.
+
+\begin{figure}[ht]
+  \centering
+  \begin{tikzpicture}[font=\small, >={Stealth[length=1.7mm]},
+      seed/.style={draw, fill=msgfill, minimum width=3.1mm,
+                   minimum height=5mm, inner sep=0pt},
+      der/.style={draw, fill=projfill, minimum width=3.1mm,
+                  minimum height=5mm, inner sep=0pt},
+      rnd/.style={draw, fill=projfill, minimum width=7mm,
+                  minimum height=6mm, inner sep=0pt, font=\scriptsize},
+      lbl/.style={font=\scriptsize}]
+    % ---- the 512-bit block ----
+    \draw[fill=msgfill] (0,5.0) rectangle (5.28,5.5);
+    \node[lbl] at (2.64,5.25) {$512$-bit message block $m$};
+    % ---- 16 seed words W0..W15 ----
+    \foreach \i in {0,...,15} {
+      \node[seed] (w\i) at ({\i*0.33+0.165},4.2) {};
+      \draw[->, gray] ({\i*0.33+0.165},4.98) -- (w\i.north);
+    }
+    \node[lbl, below=0pt of w0] {$W_0$};
+    \node[lbl, below=0pt of w15] {$W_{15}$};
+    \node[lbl, align=center] at (2.5,3.55) {\scriptsize\emph{16 seed words (from block)}};
+    % ---- derived words W16 .. W63 ----
+    \node[der, fill=lenfill] (w16) at (6.9,4.2) {};
+    \node[lbl, below=0pt of w16] {$W_{16}$};
+    \node[der] (w17) at (7.25,4.2) {};
+    \node[lbl] at (7.75,4.2) {$\cdots$};
+    \node[der] (w63) at (8.35,4.2) {};
+    \node[lbl, below=0pt of w63] {$W_{63}$};
+    \node[lbl, align=center] at (7.6,3.55) {\scriptsize\emph{48 derived}};
+    % fan-in into W16 from W0,W1(sigma0),W9,W14(sigma1)
+    \draw[->, projframe] (w0.north) ++(0,0.02) to[bend left=32] (w16.north west);
+    \draw[->, projframe] (w1.north) to[bend left=30]
+      node[above, lbl, pos=0.62] {$\sigma_0$} (w16.north);
+    \draw[->, projframe] (w9.north) to[bend left=22] (w16.north);
+    \draw[->, projframe] (w14.north) to[bend left=16]
+      node[above, lbl, pos=0.5] {$\sigma_1$} (w16.north east);
+    \node[lbl, align=center, anchor=south] at (3.2,5.95)
+      {each derived word reaches back four:
+       $W_t=\sigma_1(W_{t-2})\shaplus W_{t-7}\shaplus\sigma_0(W_{t-15})\shaplus W_{t-16}$};
+    % ---- bridge arrow ----
+    \node[lbl, anchor=east] at (9.9,3.35)
+      {\emph{the $64$ words feed the $64$ rounds, one each}};
+    \draw[->, thick] (5.0,3.55) -- (5.0,2.75);
+    % ---- round pipeline ----
+    \node[lbl, anchor=east] at (-0.2,1.9) {$\mathrm{IV}$};
+    \draw[->, very thick, black!55] (-0.2,1.9) -- (0.28,1.9);
+    \foreach \i/\lab/\x in {0/{$R_0$}/0.9, 1/{$R_1$}/2.35, 2/{$R_t$}/4.8,
+                            3/{$R_{63}$}/7.4} {
+      \node[rnd, minimum width=9mm] (r\i) at (\x,1.9) {\lab};
+    }
+    \node[lbl] at (3.575,1.9) {$\cdots$};
+    \node[lbl] at (6.1,1.9) {$\cdots$};
+    \draw[->, very thick, black!55] (r0.east) -- (r1.west);
+    \draw[->, very thick, black!55] (r1.east) -- (3.2,1.9);
+    \draw[->, very thick, black!55] (3.95,1.9) -- (r2.west);
+    \draw[->, very thick, black!55] (r2.east) -- (5.75,1.9);
+    \draw[->, very thick, black!55] (6.45,1.9) -- (r3.west);
+    \draw[->, very thick, black!55] (r3.east) -- (8.15,1.9)
+      node[lbl, anchor=west, black] {$h_{\mathrm{out}}$};
+    \node[lbl, black!55, anchor=north] at (3.7,1.42)
+      {the eight-word state $(a,\dots,h)$, threaded left to right};
+    % W (wine) and K (navy) inputs into each shown round
+    \foreach \r/\wl/\kl in {r0/{$W_0$}/{$K_0$}, r1/{$W_1$}/{$K_1$},
+                            r2/{$W_t$}/{$K_t$}, r3/{$W_{63}$}/{$K_{63}$}} {
+      \draw[->, citewine] ($(\r.north)+(-0.28,0.6)$) -- ($(\r.north)+(-0.28,0.02)$);
+      \node[lbl, citewine, anchor=south] at ($(\r.north)+(-0.28,0.58)$) {\wl};
+      \draw[->, linknavy] ($(\r.north)+(0.28,0.6)$) -- ($(\r.north)+(0.28,0.02)$);
+      \node[lbl, linknavy, anchor=south] at ($(\r.north)+(0.28,0.58)$) {\kl};
+    }
+  \end{tikzpicture}
+  \caption{How one block's data reaches every round. The block fills only
+  the sixteen seed words $W_0,\dots,W_{15}$ (blue); the message-schedule
+  recurrence then stretches them into $W_{16},\dots,W_{63}$ (each derived
+  word, shown for $W_{16}$, built from four earlier ones via the
+  $\Ftwo$-linear maps $\sigma_0,\sigma_1$ and modular addition). Each of
+  the $64$ rounds $R_t$ consumes exactly two external inputs---its
+  schedule word $W_t$ (wine) and its constant $K_t$ (navy)---and threads
+  the eight-word state through from the incoming chaining value to
+  $h_{\mathrm{out}}$. Arrows show influence: a bit of the block, via the
+  schedule's reach-back, can steer arbitrarily late rounds.}
+  \label{fig:schedule}
+\end{figure}
+
+The reach of that schedule is worth making quantitative, because it is a
+clean computed pattern rather than a hand-drawn cartoon. Trace, for each
+word $W_t$, the set of \emph{seed} words $W_0,\dots,W_{15}$---the only
+ones carrying message data---that it transitively depends on, following
+the recurrence's four back-pointers ($t-2,\,t-7,\,t-15,\,t-16$) down to
+the data layer. The dependency graph
+(\cref{fig:schedulegraph}) then answers ``how fast does a block's data
+spread through the schedule?'' exactly: the count of seeds reached climbs
+$4,4,7,7,10,10,13,14,15,15,\dots$ and \emph{saturates at $W_{26}$}---from
+that word on, every schedule word depends on all sixteen data words. Ten
+steps of the recurrence suffice to fully entangle the message, before a
+single one of the sixty-four rounds has done its diffusion work. The
+four coloured arc families in the figure are the four terms of the
+recurrence, and their regular weave is the schedule's linear-feedback
+skeleton laid bare; whether that visible regularity is a foothold or a
+red herring is one more question small experiments can chew on.
+
+\begin{figure}[ht]
+  \centering
+  \resizebox{\linewidth}{!}{\input{figures/wschedule-deps}}
+  \caption{The message schedule as a computed dependency graph
+  (generated by \texttt{tools/wschedule\_graph.py}, which also emits a
+  Graphviz \texttt{.dot} version). Nodes are the $64$ schedule words in
+  index order; the sixteen data-carrying seeds $W_0,\dots,W_{15}$ are
+  blue, and derived words darken with the number of seeds they
+  transitively depend on. Each of the four arc colours is one term of
+  $W_t=\sigma_1(W_{t-2})\shaplus W_{t-7}\shaplus\sigma_0(W_{t-15})\shaplus
+  W_{t-16}$. The lower trace counts seeds reached versus $t$; it reaches
+  all sixteen at $W_{26}$ (dashed line), after which the message is fully
+  diffused through the schedule alone.}
+  \label{fig:schedulegraph}
+\end{figure}
+
+One further structural reduction deserves emphasis, because it shrinks
+the apparent dimensionality of the mystery. Only two of the eight
+registers ever receive fresh values: each round computes one new word
+entering the $a$-position and one entering the $e$-position, while the
+other six merely shift along. The eight-word state is a \emph{delay
+line}---a memoization of recent history, not eight independent degrees
+of freedom. Writing $A_t$ and $E_t$ for the words produced at round $t$
+(so that the state at that moment reads
+$(A_t, A_{t-1}, A_{t-2}, A_{t-3},\, E_t, E_{t-1}, E_{t-2}, E_{t-3})$),
+the sixty-four rounds are exactly the coupled two-track recurrence
+\begin{align*}
+  T_t &= E_{t-4} \shaplus \Sigma_1(E_{t-1})
+        \shaplus \mathrm{Ch}(E_{t-1}, E_{t-2}, E_{t-3})
+        \shaplus K_t \shaplus W_t,\\
+  A_t &= T_t \shaplus \Sigma_0(A_{t-1})
+        \shaplus \mathrm{Maj}(A_{t-1}, A_{t-2}, A_{t-3}),
+  \qquad
+  E_t \;=\; A_{t-4} \shaplus T_t,
+\end{align*}
+with the eight initial values $A_{-1}, \dots, A_{-4}, E_{-1}, \dots,
+E_{-4}$ read off the incoming chaining state. So the ``$8$-dimensional''
+iteration is really a pair of scalar recurrences over $\Ztwo$ with
+lookback four---formally a nonlinear cousin of the lagged-Fibonacci and
+linear-feedback recurrences whose theory is complete
+(\cref{sec:prngs})---and the cryptanalytic literature does in fact work
+in exactly this $A/E$ form. Nothing is lost in the reduction; the honest
+shape of a round is two new words under an eight-word window of memory.
+
+Notice what is \emph{absent}: no multiplications, no S-box tables, no
+number-theoretic structure---only the three ARX primitives and two
+quadratic Boolean functions, iterated $64$ times. The function is
+degree-two nonlinearity compounded through $64$ rounds of geometric
+whiplash between $\Ftwo^{256}$ and $(\Ztwo)^8$. That so spare a recipe
+apparently produces a completely structureless map is the central mystery
+this paper wants to sell.
+
+\subsection{Two constructions that come with proofs}\label{sec:constructions}
+
+It is worth pausing to locate the mystery precisely, because \SHA{} is
+built in three nested layers and---remarkably---the two \emph{outer}
+layers each carry a solid theorem. Only the innermost object is
+theorem-free. Naming the layers from the outside in: the
+\emph{mode} (Merkle--Damg{\aa}rd iteration, \cref{sec:merkledamgard})
+wraps the \emph{compression function} $f$; the compression function is
+itself built by the \emph{Davies--Meyer} construction around a block
+cipher $E$; and $E$---the cipher SHACAL-2, which is just the round
+machinery above run as a keyed permutation---is the finite map about
+which nothing is proved. The provable security of \SHA{} is entirely a
+statement about the two wrappers, conditional on the core behaving well.
+
+\paragraph{The mode: Merkle--Damg{\aa}rd.} The outer layer's theorem is
+already in hand: \cref{thm:md} says that a collision in the full hash
+constructively yields a collision in $f$, so \emph{collision resistance
+of $f$ is inherited by the whole function}---unconditionally, in the
+standard model, needing only that the final block encode the message
+length (the ``strengthening'' the proof consumes). This is as solid as
+theorems in this subject get: no idealization, no unproven assumption, a
+one-page reduction. What it does \emph{not} give is equally important and
+sharply delimited---it transfers collision resistance and nothing else,
+which is exactly why length extension and the multicollision family of
+\cref{sec:mdstructure} slip through. The mode is a theorem about one
+property, and an honest one.
+
+\paragraph{The compression function: Davies--Meyer.} The middle layer is
+the feedforward met in \cref{sec:roundshape}. Take a block cipher
+$E_m(h)$---plaintext the chaining value $h\in\State$, key the message
+block $m$---and set
+\[
+  f(h,m) \;=\; E_m(h) \,\shaplus\, h .
+\]
+The feedforward ``$\shaplus\,h$'' is the whole point. Without it,
+$f = E_m$ would be a \emph{permutation} of $\State$ for each fixed $m$,
+hence trivially invertible (decrypt with key $m$) and useless as a
+one-way compression---the same observation that, read dynamically,
+\cref{sec:unless} shows is what makes iterated \SHA{} lose entropy at
+all. Adding the input back breaks invertibility, and does so in a way one
+can prove is optimal, provided the cipher is idealized:
+
+\begin{theorem}[Preneel--Govaerts--Vandewalle; Black--Rogaway--Shrimpton]
+\label{thm:dm}
+Model $E$ as an \emph{ideal cipher} (for each key an independent, uniformly
+random permutation, accessible only as a black box in both directions).
+Then the Davies--Meyer compression $f(h,m)=E_m(h)\shaplus h$ is optimally
+collision- and preimage-resistant: any adversary asking $q$ cipher
+queries finds a collision with probability at most $q(q+1)/2^{n}$, and a
+preimage with probability of order $q/2^{n}$---matching the birthday
+bound $2^{n/2}$ for collisions and the brute-force bound $2^{n}$ for
+preimages, and both are tight.
+\end{theorem}
+
+\citet{PGV1993} isolated this by classifying all $64$ natural ways to
+build a rate-one compression function from a block cipher and singling
+out the $12$ sound ones (Davies--Meyer among them); \citet{BRS2002} then
+supplied the rigorous black-box proofs and the exact bounds quoted above.
+So the middle layer, too, has a theorem---but note the price on the
+ticket. It holds in the \emph{ideal cipher model}, the block-cipher
+cousin of the random-oracle model of \cref{sec:models}, and is therefore
+a heuristic about \SHA{}, not a proof about it: SHACAL-2 is a fixed, public,
+emphatically non-ideal cipher whose ``key schedule'' is literally the
+message expansion of \cref{sec:roundshape}, so the assumption that
+distinct message blocks act like independent random permutations is
+exactly the leap of faith the model licenses and cannot justify. A
+concrete reminder that the idealization is lossy: Davies--Meyer has
+\emph{trivially computable fixed points}---solving $E_m(h)\shaplus h = h$
+means $E_m(h)=0$, i.e.\ $h = E_m^{-1}(0)$, one short computation per
+block---a harmless-looking feature that became a lever for the
+long-message second-preimage attacks of \cref{sec:mdstructure}.
+
+\paragraph{The moral, localized.} Two layers, two theorems: the mode
+proved unconditionally, the compression proved in an idealized model, and
+between them they reduce the security of the whole edifice to a single
+demand---that the core map $f$ (equivalently the cipher $E$) have no
+exploitable structure. That demand is \cref{sec:frameworks}'s gap, and
+it is where every remaining page of this paper lives. The architecture is
+solved mathematics; the mystery has been squeezed into one finite object,
+and the constructions of this section are precisely the machinery that
+did the squeezing.
+
+\subsection{One honest theorem: invertible diffusion}\label{sec:rivest}
+
+Amid so much that is unproved, it is worth exhibiting in full one of the
+few genuine theorems about \SHA{}'s internals---partly because it is
+lovely, partly because its proof lives in exactly the finite geometry of
+\cref{sec:statespace}, and partly because it shows the ``middle
+territory'' of \cref{sec:gap} is not empty by necessity.
+
+Ask a basic anatomical question about the stirring maps of
+\cref{sec:roundshape}: are $\Sigma_0, \Sigma_1, \sigma_0, \sigma_1$
+\emph{bijections} of the word space $\Ftwo^{32}$? (They are
+$\Ftwo$-linear, hence ``nonlinearities'' only through the other lens of
+\cref{sec:statespace}---as maps of $\Ztwo$ they are wildly nonlinear.
+The question is whether they discard information.) Rivest answered this
+for the pure-rotation case in a four-page note~\citep{Rivest2011}:
+
+\begin{theorem}[Rivest]\label{thm:rivest}
+Let $w$ be a power of two. The exclusive-or of $t$ distinct rotations of
+a $w$-bit word,
+$x \mapsto \mathrm{ROTR}^{r_1}(x) \shaxor \cdots \shaxor \mathrm{ROTR}^{r_t}(x)$,
+is invertible if and only if $t$ is odd.
+\end{theorem}
+
+\begin{proof}[Proof idea]
+Identify $\Ftwo^{32}$ with the quotient ring
+$R = \Ftwo[x]/(x^{32}-1)$, a bit vector becoming a polynomial and
+rotation becoming multiplication by $x^{r}$. The map in question is
+multiplication by $p(x) = x^{r_1} + \cdots + x^{r_t}$, invertible in $R$
+exactly when $\gcd\bigl(p(x),\, x^{32}-1\bigr) = 1$. Over $\Ftwo$ the
+modulus collapses---$x^{32} - 1 = (x-1)^{32}$, because $32$ is a power of
+two and squaring is a ring homomorphism in characteristic $2$---so the
+gcd is $1$ precisely when $(x-1) \nmid p$, i.e.\ when $p(1) = t \bmod 2$
+is $1$.
+\end{proof}
+
+So $\Sigma_0 = \mathrm{ROTR}^{2} \shaxor \mathrm{ROTR}^{13} \shaxor
+\mathrm{ROTR}^{22}$ and $\Sigma_1$, with their three rotations each, are
+bijections: they stir without spilling. The theorem repays contemplation.
+It is two lines of algebra, yet it turns on the arithmetic accident that
+the word length is a power of two, which makes the cyclic algebra $R$
+\emph{local} (one maximal ideal, generated by $x-1$): the only way an
+xor-of-rotations can fail to be invertible is by having an even number of
+terms. Had the designers used $33$-bit words, $x^{33}-1$ would factor
+richly and the parity rule would be false. Small finite geometries have
+loud opinions.
+
+Because the proof is constructive, invertibility need not be left as an
+existence statement: the inverses can be exhibited outright. Carrying out
+the division in $R$---equivalently, inverting the corresponding
+$32\times32$ circulant matrices over $\Ftwo$; \cref{app:sigmacode} gives
+a complete reference implementation, which also confirms the results on
+thousands of random words---produces closed forms that are again xors of
+rotations:
+\begin{equation}\label{eq:sigmainv}
+\begin{aligned}
+  \Sigma_0^{-1} \;&=\; \bigoplus_{r \in S_0} \mathrm{ROTR}^{r},
+  & S_0 &= \{0,1,2,5,7,8,9,10,12,16,17,19,22,23,25,29,30\},\\
+  \Sigma_1^{-1} \;&=\; \bigoplus_{r \in S_1} \mathrm{ROTR}^{r},
+  & S_1 &= \{2,3,5,7,9,11,12,13,18,21,22,23,24,26,27,29,30\},
+\end{aligned}
+\end{equation}
+each an xor of \emph{seventeen} rotations ($S_0$ includes $r = 0$, the
+identity rotation). Seventeen is odd, as \cref{thm:rivest} demands of any
+invertible xor-of-rotations---and as it must be on general grounds:
+evaluating $p\,q \equiv 1$ at $x = 1$ forces
+$|p| \cdot |q| \equiv 1 \pmod 2$, so odd-weight elements have odd-weight
+inverses. The asymmetry of sparseness is the striking part: three
+rotations to stir, seventeen to unstir---more than half of the
+thirty-two possible offsets. Invertible is not the same as symmetrically
+cheap, even inside the linear layer.
+
+The ring picture yields more than the inverses; it computes the whole
+multiplicative life of these maps, essentially by hand. Composition of
+rotations adds offsets modulo $32$, so write an xor-of-rotations as a
+polynomial with the \emph{offsets as exponents}: $\Sigma_0$ becomes
+$p_0 = x^{2} + x^{13} + x^{22}$. Squaring is the Frobenius map of
+characteristic $2$---it simply doubles every offset---so squaring $p_0$
+three times gives, after reducing exponents modulo $32$,
+$\Sigma_0^{8} = \mathrm{ROTR}^{8}$: \emph{eight applications of the
+three-rotation stir collapse to one bare rotation}. Hence
+$\Sigma_0^{32} = \mathrm{id}$, and the order of $\Sigma_0$ in
+$\mathrm{GL}_{32}(\Ftwo)$ is exactly $32$; the same computation gives
+$\Sigma_1^{16} = \mathrm{id}$ with order exactly $16$. In particular
+$\Sigma_0^{-1} = \Sigma_0^{31}$ and $\Sigma_1^{-1} = \Sigma_1^{15}$, so
+\cref{eq:sigmainv} could have been generated, offsets and all, by
+repeated squaring. One more turn of the crank and the observation
+becomes a theorem: for \emph{any} odd xor-of-rotations $u$ of $32$-bit
+words, $u^{32} = u(x)^{32} = u(x^{32}) = u(1) = 1$, so every invertible
+xor-of-rotations has order dividing $32$. The stirring maps of \SHA{},
+for all their visual violence, are elements of small $2$-power order in
+a $2$-group---one more exact structural fact living quietly next door to
+the conjectured structurelessness (\cref{sec:hope}).
+
+Note what the theorem does \emph{not} cover: $\sigma_0 =
+\mathrm{ROTR}^{7} \shaxor \mathrm{ROTR}^{18} \shaxor \mathrm{SHR}^{3}$
+and $\sigma_1$ each replace one rotation by a bit-discarding shift,
+leaving the polynomial ring for plain linear algebra; and the genuinely
+non-invertible ingredients of \SHA{} are elsewhere entirely---the
+bitwise-quadratic $\mathrm{Ch}$ and $\mathrm{Maj}$ and the Davies--Meyer
+feedforward, where all the designed information loss is concentrated. The
+picture that emerges is architectural: \emph{lossless} stirring layers
+(provably so, by \cref{thm:rivest}), \emph{lossy} mixing concentrated in
+three auditable places. That so clean a structural statement was worth a
+research note in 2011---twenty years into the design lineage---says
+something about how sparsely theorized this territory is.
+
+\begin{project}{The linear algebra of diffusion}{linear algebra;
+  programming}{3--4 weeks}
+  Write each of $\Sigma_0, \Sigma_1, \sigma_0, \sigma_1$ as an explicit
+  $32 \times 32$ matrix over $\Ftwo$ and decide invertibility of the
+  $\sigma$'s (settling what \cref{thm:rivest} leaves open). Compute the
+  order of each invertible map in $\mathrm{GL}_{32}(\Ftwo)$, the cycle
+  structure of its action on $\Ftwo^{32}$, and the subgroup the four maps
+  generate. Then reprove \cref{thm:rivest} for general word length $w$:
+  the answer is a pretty gcd condition (worked out in Rivest's note), and
+  comparing $w = 32$ with $w = 33$ makes the power-of-two accident vivid.
+\end{project}
+
+\begin{project}{Deriving the exact inverses of $\Sigma_0$ and $\Sigma_1$}
+  {polynomial arithmetic over $\Ftwo$; programming}{2--3 weeks}
+  \Cref{thm:rivest} guarantees that $\Sigma_0$ and $\Sigma_1$ are
+  bijections, and \cref{eq:sigmainv} displays their inverses; this
+  project derives that display from scratch, by two independent methods,
+  and decides what \cref{eq:sigmainv} deliberately leaves out. The steps
+  are fully determined:
+  \begin{enumerate}
+    \item \textbf{Move to the ring.} Identify a word with a polynomial in
+      $R = \Ftwo[x]/(x^{32}-1)$, bit $i$ becoming the coefficient of
+      $x^i$, so that a rotation is multiplication by a power of $x$.
+      Write $\Sigma_0$ as multiplication by
+      $p_0(x) = x^{2} + x^{13} + x^{22}$ and $\Sigma_1$ by
+      $p_1(x) = x^{6} + x^{11} + x^{25}$ (the \SHA{} rotation offsets).
+    \item \textbf{Invert by linear algebra.} Multiplication by $p$ is an
+      $\Ftwo$-linear circulant map; build its $32\times32$ matrix (columns
+      are $p, xp, x^2p, \dots$) and invert it over $\Ftwo$ by Gaussian
+      elimination. The last column of the inverse, read as a polynomial
+      $q$, satisfies $p\,q \equiv 1 \pmod{x^{32}-1}$.
+    \item \textbf{Read off the answer.} You should recover exactly the
+      seventeen-term rotation sets of \cref{eq:sigmainv}. Verify
+      $p\,q = 1$ in $R$ directly, and check your derivation against the
+      reference implementation of \cref{app:sigmacode}. Then reproduce
+      \cref{eq:sigmainv} a third way, with no linear algebra at all: by
+      repeated squaring, using $\Sigma_0^{-1} = \Sigma_0^{31}$ and
+      $\Sigma_1^{-1} = \Sigma_1^{15}$.
+    \item \textbf{Cross-check by Euclid.} Recompute $q$ by the extended
+      Euclidean algorithm on $p(x)$ and $x^{32}-1 = (x-1)^{32}$ in
+      $\Ftwo[x]$; the two methods must agree.
+    \item \textbf{Contrast with the $\sigma$'s.} Repeat for
+      $\sigma_0 = \mathrm{ROTR}^{7}\shaxor\mathrm{ROTR}^{18}\shaxor
+      \mathrm{SHR}^{3}$: the shift $\mathrm{SHR}^{3}$ leaves the cyclic
+      ring (it is not a unit multiple of $x$), so the polynomial trick
+      fails and only the matrix method applies. Decide invertibility of
+      $\sigma_0, \sigma_1$ this way---settling what \cref{thm:rivest}
+      does not cover.
+  \end{enumerate}
+  Deliverable: the two explicit inverse maps, a proof they are correct,
+  and a one-paragraph account of why the $\sigma$'s need the heavier tool.
+\end{project}
+
+\subsection{Nothing up my sleeve}\label{sec:nums}
+
+One question a mathematician should ask of \cref{sec:roundshape}: where do
+the constants come from? The initial state $\mathrm{IV}$ and the sixty-four
+round constants $K_t$ could, in principle, hide a trapdoor---constants
+engineered so their designer knows structure nobody else can see. The
+history is not hypothetical: the unexplained S-box constants of the 1970s
+DES cipher fed decades of suspicion (later resolved in the designers'
+favor), and post-Snowden, an actual back-doored NIST standard (the
+Dual\_EC random generator) was withdrawn. The SHA family itself supplies
+the sharpest demonstration that its designer's choices are informed
+rather than arbitrary: the NSA's unexplained one-bit revision of SHA-0
+into SHA-1 (see the footnote in \cref{sec:history}) anticipated by four
+years the differential attack later found in the open
+literature~\citep{ChabaudJoux1998}. The SHA-2 designers therefore
+committed to constants they visibly could not have chosen:
+\[
+  \mathrm{IV}_j = \text{first 32 fractional bits of } \sqrt{p_j},
+  \qquad
+  K_t = \text{first 32 fractional bits of } \sqrt[3]{p_t},
+\]
+where $p_1 < p_2 < \cdots$ are the primes $2, 3, 5, \dots$~\citep{FIPS180-4}.
+(So $\mathrm{IV}_1 = \mathtt{6a09e667}$ encodes $\sqrt{2}-1$ in binary.)
+Such choices are called \emph{nothing-up-my-sleeve} constants: points of
+the state space selected by a rule so canonical that no freedom remains in
+which to hide intent.
+
+There is a pleasing irony here that deserves a mathematician's smile: the
+constants are trusted \emph{because} they are digits of irrational
+numbers, yet essentially nothing is proved about those digits either---the
+normality of $\sqrt{2}$ is an open problem. The construction does not
+replace an unproved assumption with a proved one; it replaces an
+\emph{unauditable} choice with an \emph{auditable} one. Epistemology, not
+theorems, is doing the work---a theme by now familiar
+(\cref{sec:epistemology}).
+
+\subsection{Reasons for hope: exact solutions next door}\label{sec:hope}
+
+Almost everything after this section will be statistical:
+random-mapping silhouettes, test batteries, mixing arguments---the
+approximate machinery one reaches for when exact structure is
+unavailable. Before conceding that this is the only possible register,
+it is worth assembling the evidence that exact structure keeps turning
+up \emph{next door}, because the history of discrete iteration is
+littered with problems that looked hopelessly procedural until someone
+found the right coordinates.
+
+The Josephus process (\cref{sec:josephus}) is this paper's opening
+specimen: an $(n-1)$-step elimination dynamics collapsed to a single
+bit rotation. \Cref{thm:rivest} is a second, living inside \SHA{}
+itself: a question about its diffusion maps settled by two lines of
+algebra in a local ring. The genre is much larger. Additive cellular
+automata---iterative, visually turbulent, every bit as ``chaotic'' in
+appearance as a hash round---were solved outright by
+\citet{MartinOdlyzkoWolfram1984}: represent configurations as
+polynomials over $\Ftwo$ and time evolution becomes multiplication,
+with global transient and cycle structure falling out as exact
+divisibility statements. \citet{Sutner1989} dispatched the Lights-Out
+puzzle the same way (the $\sigma$-game as $\Ftwo$-linear algebra). The
+pattern is older than computing: the logistic map at parameter $4$, the
+textbook ``chaotic'' system, has the closed form
+$x_t = \sin^2\!\bigl(2^t \arcsin\sqrt{x_0}\,\bigr)$---an observation
+going back to Ulam and von Neumann, and the simplest instance of
+Schr{\"o}der's program of solving iteration by
+conjugation~\citep{Schroeder1871}: find $\psi$ making
+$\psi \circ f \circ \psi^{-1}$ linear, and the $t$-th iterate is
+computed in one stroke. That program grew into modern complex
+dynamics~\citep{Milnor2006}. ``Chaotic'' and ``exactly solvable'' are
+not antonyms; they are frequently the same object described before and
+after the right change of variables.
+
+Within the hash family the lesson recurs. SHA-1's message schedule is
+$\Ftwo$-linear, hence \emph{exactly} analyzable---its difference
+propagation is linear algebra---and that handle is precisely what the
+collision attacks of \cref{sec:falling} gripped. The professional
+response to such objects has been the cryptanalyst's panoply,
+differential attacks in the tradition of \citet{BihamShamir1991} and
+their descendants: a \emph{statistical} theory of near-structure,
+probability-weighted trails threaded through the rounds
+(\cref{sec:differential} is devoted to it). The examples
+above argue for keeping a different question alive: whether some change
+of coordinates---a direct finite-geometry path, in the spirit of the
+polynomial representations that solved cellular automata, with no
+mixing theory, no ergodicity, and nothing approximate---renders some
+nontrivial slice of the iteration exactly computable. The designers'
+explicit goal was to foreclose this (\cref{sec:statespace}), and the
+smart money says they succeeded. But the foreclosure is a conjecture,
+not a theorem; the components keep falling one at a time to exact
+methods (\cref{thm:rivest}, the T-function
+theory~\citep{KlimovShamir2003, Anashin2006}, the two-track reduction
+of \cref{sec:roundshape}); and the hunting grounds are tiny finite
+objects, where undergraduate computation is a genuine research
+instrument (\cref{sec:projects}).

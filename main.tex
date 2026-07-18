@@ -1,0 +1,68 @@
+% ============================================================
+% SHA-256 as a mathematical object: a field guide and a
+% research program.  (Baseline variant.)
+%
+% Build:  make            (all variants)
+%         latexmk -pdf main.tex   (this variant only)
+%
+% Structure: preamble.tex holds all packages/macros; each section
+% lives in sections/NN-name.tex; backmatter.tex holds the appendix
+% and the clustered references. Sibling variants main-algebra.tex
+% and main-projects.tex share everything but the front matter.
+% ============================================================
+\providecommand{\DocPdfTitle}{SHA-256 as a Mathematical Object}
+\input{preamble}
+
+\title{\SHA{} as a Mathematical Object:\\
+       \large A Field Guide and a Program of Small Questions}
+\author{[Author name here]\thanks{Working draft for mathematician
+  colleagues. Comments very welcome.}}
+\date{Last updated \lastupdated}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+The function \SHA{} maps arbitrary bit-strings of bounded length to
+$256$-bit strings. It is one of the most heavily used mathematical objects
+on Earth, and one of the least understood: a quarter-century of study has
+produced neither a proof of any of its conjectured properties nor any
+observable deviation from the behavior of a random function. This note
+introduces \SHA{} historically and empirically---what it is for, why it has
+lasted---and then frames it geometrically, as a self-map of the finite space
+$(\Ztwo)^8$ built by deliberately alternating two incompatible group
+structures on the same $2^{256}$-point set---a clash the $2$-adic metric
+brings into sharp focus, sorting the machine operations by whether they
+respect it and opening an unexpected line to the nonarchimedean dynamics
+of $p$-adic disks. We describe the frameworks that
+exist for analyzing such objects, why a large gap separates ``passes every
+test we have'' from ``provably pseudorandom,'' and how the
+complex-analytic tradition of Flajolet and collaborators, brought to bear
+on the statistics of random mappings, offers concrete, measurable
+coordinates for locating \SHA{} in the space of pseudorandom generators. We then open the adversary's own toolbox---%
+differential cryptanalysis, the method that felled this function's
+ancestors, with its remarkable secret history---and close with the view
+from computational complexity: \textsc{sat} solvers, Impagliazzo's five
+worlds, and what theorem provers did and did not prove. Throughout, we flag self-contained subprojects
+suitable for undergraduates in short research windows.
+\end{abstract}
+
+\tableofcontents
+\bigskip
+
+\input{sections/00-howtoread}
+
+\input{sections/01-josephus}
+\input{sections/02-history-uses}
+\input{sections/03-geometry}
+\input{sections/04-random-maps}
+\input{sections/045-iterated}
+\input{sections/05-frameworks}
+\input{sections/052-differential}
+\input{sections/055-computability}
+\input{sections/06-projects}
+
+\input{backmatter}
+
+\end{document}

@@ -1,0 +1,106 @@
+% ------------------------------------------------------------
+% §6  The research program, cut into undergraduate-sized pieces
+% ------------------------------------------------------------
+\section{Undergraduate short projects}\label{sec:projects}
+
+The preceding sections flagged thirteen concrete projects at the point where
+each becomes natural; here we collect them and add the program-level view.
+The unifying activity is \emph{measurement}: locating scaled-down members
+of the \SHA{} design family in coordinate systems (Flajolet's above all)
+where ``looks random'' becomes a number with error bars. None of the
+projects requires cryptographic background beyond this paper; all require
+programming and a taste for experiment; each produces figures and data
+that are a contribution regardless of what they show. That last property
+is worth underlining for research with undergraduates in short windows:
+these are experiments that \emph{cannot fail}, only surprise.
+
+\begin{center}
+\small
+\begin{tabular}{@{}p{0.30\linewidth}p{0.22\linewidth}p{0.12\linewidth}p{0.24\linewidth}@{}}
+  \toprule
+  project (defined in) & prerequisites & window & deliverable \\
+  \midrule
+  Single ops under the $2$-adic lens (\cref{sec:statespace}) &
+    elementary number theory & 3--4 wks &
+    verified ergodicity criteria, orbit visualizations \\[2pt]
+  The linear algebra of diffusion (\cref{sec:rivest}) &
+    linear algebra & 3--4 wks &
+    invertibility \& group structure of the $\Sigma/\sigma$ maps \\[2pt]
+  Exact inverses of $\Sigma_0, \Sigma_1$ (\cref{sec:rivest}) &
+    polynomials over $\Ftwo$ & 2--3 wks &
+    closed-form inverse maps, verified two ways \\[2pt]
+  Functional-graph atlas of truncated \SHA{} (\cref{sec:telescope}) &
+    probability, programming & 6--8 wks &
+    atlas of measured vs.\ predicted statistics \\[2pt]
+  Collision hunting, van Oorschot--Wiener style (\cref{sec:telescope}) &
+    probability, programming & 4--6 wks &
+    timing distributions vs.\ theory; parallel implementation \\[2pt]
+  The dynamics of iteration (\cref{sec:iterated}) &
+    probability, programming & 6--8 wks &
+    image-shrinkage law, fixed points, Hellman trade-off \\[2pt]
+  Cutoff for toy compression walks (\cref{sec:prngs}) &
+    probability, linear algebra & 4--6 wks &
+    spectral gaps and cutoff profiles vs.\ rounds \\[2pt]
+  Cayley hashes by hand (\cref{sec:provable}) &
+    group theory, linear algebra & 3--4 wks &
+    spectral gap vs.\ equidistribution; collision gallery \\[2pt]
+  Differential trails in miniature (\cref{sec:siege}) &
+    probability, programming & 4--6 wks &
+    exact toll tables; best-trail probability vs.\ rounds \\[2pt]
+  The \textsc{sat} cliff (\cref{sec:npsearch}) &
+    programming, logic & 4--6 wks &
+    solver-time cliff chart; three frontiers on one axis \\[2pt]
+  A neural distinguisher at toy scale (\cref{sec:mlcrypt}) &
+    programming, machine learning & 6--8 wks &
+    learned-advantage vs.\ rounds; interpretation of the model \\[2pt]
+  Where do the tests start failing? (\cref{sec:gap}) &
+    statistics, programming & 4--6 wks &
+    round-by-round battery failure chart \\[2pt]
+  Avalanche cartography (\cref{sec:gap}) &
+    linear algebra, programming & 4--6 wks &
+    influence-matrix heatmaps by round \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+\medskip
+
+Three remarks on the program as a whole.
+
+\paragraph{Model organisms.} The full-scale function is beyond experiment
+(\cref{sec:telescope}) and beyond proof (\cref{sec:gap}); the program
+therefore studies the \emph{family} obtained by shrinking each design
+parameter---word size $32 \to 8$ or $16$, state words $8 \to 4$, rounds
+$64 \to r$---the way biology studies fruit flies. The two-geometry anatomy
+of \cref{sec:statespace} says which shrinkings are honest: one must
+preserve the ARX alternation, or the object degenerates into something a
+single lens solves. A systematic scaled family, with its statistics
+measured, would be a reusable community resource; no standard one exists.
+
+\paragraph{The comparative method.} Every measurement gains meaning from
+controls on both sides: genuinely random maps (the Flajolet silhouette)
+on one side, and visibly structured maps (bijections, $\Ftwo$-linear
+maps, one-round toys) on the other. The interesting science is in the
+\emph{trajectory}---how, as rounds accumulate, a \SHA{}-family map walks
+from the structured region onto the random silhouette, in which
+coordinates it arrives first, and whether the walk is gradual or a phase
+transition. SHA-1 and \SHA{} can be given the identical treatment; given
+\cref{sec:falling}, any measurable divergence between their trajectories
+would be a finding of genuine interest.
+
+\paragraph{Odds of surprise.} Realistically: most measurements will
+confirm the random silhouette, and their value is the atlas itself plus
+trained students. But the history of \cref{sec:josephus} cuts both
+ways---structure, when it exists in innocent-looking discrete processes,
+has repeatedly been found by exactly this kind of patient small-case
+empiricism, and essentially nobody has pointed the analytic-combinatorics
+instrument at this family at model-organism scale. The expected value of
+looking is small-positive; the tail is long.
+
+\medskip
+
+\noindent\emph{On tooling.} Everything above runs comfortably in Python
+or Julia on a laptop for $n \le 30$; the collision-hunting and atlas
+projects scale gracefully to whatever cluster time is available. We
+maintain reference implementations and are happy to share scaffolding so
+that student time goes to science rather than plumbing.

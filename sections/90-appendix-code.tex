@@ -1,0 +1,53 @@
+% ------------------------------------------------------------
+% §A  Appendix: reference implementation for the Sigma inverses
+% ------------------------------------------------------------
+\section{Reference implementation: inverting $\Sigma_0$ and $\Sigma_1$}
+\label{app:sigmacode}
+
+The listing below (\texttt{tools/invert\_sigma.py} in the distribution
+accompanying this document) is the computational companion to
+\cref{sec:rivest}. It is included in full for three reasons.
+
+First, it discharges a proof obligation. \Cref{thm:rivest} certifies
+that $\Sigma_0$ and $\Sigma_1$ are bijections but exhibits nothing;
+\cref{eq:sigmainv} exhibits the inverses but asks to be believed. The
+script closes the loop: it constructs each map's $32\times32$ matrix
+over $\Ftwo$, inverts it by Gaussian elimination, reads the inverse off
+as an xor of rotations (the inverse of a circulant map is circulant, so
+the image of the basis word $1$ determines everything), and then
+verifies---functionally, against the standard's own
+definition~\citep{FIPS180-4} of $\mathrm{ROTR}$---that the seventeen-term
+maps of \cref{eq:sigmainv} invert $\Sigma_0$ and $\Sigma_1$ on thousands
+of words, along with the order facts $\Sigma_0^{8} = \mathrm{ROTR}^{8}$,
+$\Sigma_0^{32} = \Sigma_1^{16} = \mathrm{id}$, and
+$\Sigma_i^{-1} = \Sigma_i^{\mathrm{ord}-1}$ from \cref{sec:rivest}.
+A skeptical reader can rerun the whole certificate in under a second.
+
+Second, the verification is \emph{convention-proof}, and seeing why is a
+small lesson in the algebra of \cref{sec:rivest}. Any claim phrased in
+the polynomial ring $R$ silently commits to a bit-numbering convention
+(is bit $i$ the coefficient of $x^i$ or of $x^{31-i}$? is rotation
+multiplication by $x^r$ or $x^{-r}$?), and such commitments are exactly
+where off-by-one and mirror-image errors breed. But the composition law
+$\mathrm{ROTR}^{a} \circ \mathrm{ROTR}^{b} = \mathrm{ROTR}^{a+b \bmod 32}$
+holds under every convention, so the statement ``the rotation multiset
+$S_0 + \{2,13,22\} \bmod 32$ covers $0$ an odd number of times and every
+other offset an even number of times'' -- which is what
+\cref{eq:sigmainv} asserts -- is convention-free, and the script checks
+it against the operational definition rather than any ring
+identification. This is the paper's epistemological theme
+(\cref{sec:epistemology}) in miniature: replace an argument one must
+trust with an artifact anyone can audit.
+
+Third, it is deliberately written as scaffolding. The two project boxes
+of \cref{sec:rivest} ask for the same computation done other
+ways---extended Euclid in $\Ftwo[x]$, repeated Frobenius squaring---and
+for the $\sigma_0, \sigma_1$ question that \cref{eq:sigmainv}
+deliberately leaves open; the functions here (\texttt{matrix\_of},
+\texttt{invert\_matrix}) apply verbatim to the shift-containing maps,
+and changing the single constant \texttt{W} repeats every experiment at
+any word length, where Rivest's gcd condition~\citep{Rivest2011} comes
+alive (try \texttt{W = 33}).
+
+\medskip
+\lstinputlisting[language=Python]{tools/invert_sigma.py}

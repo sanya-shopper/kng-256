@@ -1,0 +1,268 @@
+% ------------------------------------------------------------
+% §4  Random mappings and Flajolet's lens
+% ------------------------------------------------------------
+\section{Random mappings: Flajolet's telescope}\label{sec:randommaps}
+
+If the working conjecture is ``\SHA{} behaves like a random function,''
+then the right response is the scientist's: \emph{a conjecture that
+mentions randomness is a bundle of quantitative predictions}. What does a
+random function actually look like? Remarkably, this question has an
+exact, beautiful answer, developed by Harris in the probabilistic
+era~\citep{Harris1960} and perfected by Flajolet and Odlyzko with
+generating-function methods~\citep{FlajoletOdlyzko1990}. The answer turns
+the vague conjecture into a table of measurable constants.
+
+\subsection{The functional graph of a random map}\label{sec:fungraph}
+
+Let $\varphi$ be a function from a finite set of size $N$ to itself---for
+us, eventually, $\varphi = $ (some restriction of) \SHA{}, with
+$N = 2^n$. Draw the \emph{functional graph}: a node for each point, an
+arrow $x \to \varphi(x)$. Because every node has out-degree exactly one,
+the shape is forced: each connected component consists of exactly one
+directed cycle, with trees hanging off the cycle nodes
+(\cref{fig:rho}). Iterating $\varphi$ from any seed $x_0$ walks a
+$\rho$-shaped path: a \emph{tail} of $\lambda$ new points, then a
+\emph{cycle} of length $\mu$ repeated forever.
+
+\begin{figure}[ht]
+  \centering
+  \begin{tikzpicture}[>={Stealth[length=1.8mm]},
+      pt/.style={circle, fill, inner sep=1.4pt},
+      lbl/.style={font=\scriptsize}]
+    % cycle of 8, label inside
+    \foreach \i in {0,...,7} {
+      \pgfmathsetmacro{\ang}{\i*45}
+      \node[pt] (c\i) at ($(4.55,0)+(\ang:1.2)$) {};
+    }
+    \foreach \i [evaluate=\i as \j using {int(mod(\i+1,8))}] in {0,...,7}
+      \draw[->] (c\i) to[bend right=18] (c\j);
+    \node[lbl, align=center] at (4.55,0) {cycle\\length $\mu$};
+    % horizontal tail entering the leftmost cycle node c4
+    \node[pt] (t0) at (0.4,0) {};
+    \node[pt] (t1) at (1.4,0) {};
+    \node[pt] (t2) at (2.4,0) {};
+    \node[lbl, left=1mm of t0] {$x_0$};
+    \draw[->] (t0) -- (t1);
+    \draw[->] (t1) -- (t2);
+    \draw[->] (t2) -- (c4);
+    % small trees hanging off cycle nodes, kept clear of everything
+    \node[pt] (a1) at ($(c2)+(-0.45,0.75)$) {};
+    \node[pt] (a2) at ($(c2)+(0.5,0.8)$) {};
+    \node[pt] (a3) at ($(a2)+(0.55,0.65)$) {};
+    \draw[->] (a1) -- (c2); \draw[->] (a2) -- (c2); \draw[->] (a3) -- (a2);
+    \node[pt] (b1) at ($(c7)+(0.65,-0.6)$) {};
+    \node[pt] (b2) at ($(b1)+(0.55,-0.6)$) {};
+    \draw[->] (b1) -- (c7); \draw[->] (b2) -- (b1);
+    % tail brace
+    \draw[decorate, decoration={brace, amplitude=4pt, mirror}]
+      (0.4,-0.35) -- (3.1,-0.35)
+      node[midway, below=5pt, lbl] {tail, length $\lambda$};
+  \end{tikzpicture}
+  \caption{One component of a functional graph. Iteration from any seed
+  traces a $\rho$: a tail of length $\lambda$ into a cycle of length
+  $\mu$. Trees hang off the cycle; components with their unique cycles
+  tile the whole space.}
+  \label{fig:rho}
+\end{figure}
+
+Now let $\varphi$ be chosen \emph{uniformly at random} among all $N^N$
+self-maps. Flajolet and Odlyzko computed the expected value of essentially
+every natural parameter of this picture; a sample, asymptotically as
+$N \to \infty$~\citep{FlajoletOdlyzko1990}:
+
+\begin{center}
+\begin{tabular}{@{}llll@{}}
+  \toprule
+  parameter && expectation & at $N = 2^{256}$ \\
+  \midrule
+  tail length $\lambda$ (random seed)   && $\sqrt{\pi N / 8}$        & $\approx 2^{127.3}$ \\
+  cycle length $\mu$ (random seed)      && $\sqrt{\pi N / 8}$        & $\approx 2^{127.3}$ \\
+  rho length $\lambda + \mu$            && $\sqrt{\pi N / 2}$        & $\approx 2^{128.3}$ \\
+  number of cyclic points               && $\sqrt{\pi N / 2}$        & $\approx 2^{128.3}$ \\
+  number of components                  && $\tfrac12 \ln N$          & $\approx 89$ \\
+  image size $|\varphi(\State)|$        && $(1 - e^{-1})\,N$         & $\approx 0.632\,N$ \\
+  points with no preimage (leaves)      && $e^{-1}\, N$              & $\approx 0.368\,N$ \\
+  largest component                     && $\approx 0.7582\,N$       & --- \\
+  largest tree                          && $\approx 0.48\,N$         & --- \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Pause on the flavor of these results. A ``typical'' random map is nothing
+like a random permutation: it is lossy (a third of the space is never hit
+at all), it has one giant component swallowing three quarters of
+everything, its cycles are tiny compared to $N$ (order $\sqrt{N}$), and
+the number of components grows only logarithmically. This is a sharp,
+peculiar, recognizable statistical silhouette---a fingerprint of
+structurelessness itself.
+
+\subsection{Where the constants come from}\label{sec:singularity}
+
+The route to that table is pure Flajolet, and worth a paragraph even in an
+overview, because it connects our discrete object to complex analysis. A
+tree rooted at a node whose arrow enters a cycle is a labelled rooted
+tree; its exponential generating function $T(z)$ satisfies the functional
+equation
+\[
+  T(z) = z\, e^{T(z)}
+\]
+(a root, plus a set of subtrees). Components are cycles of trees, and
+mappings are sets of components, which by the symbolic calculus gives the
+mapping EGF
+\[
+  M(z) \;=\; \frac{1}{1 - T(z)} .
+\]
+All the parameters in the table are obtained by marking features in these
+equations and then reading off coefficient asymptotics. The engine for the
+last step: $T$ has a square-root singularity at $z = e^{-1}$, where
+$T(e^{-1}) = 1$---so $M$ blows up there---and \emph{singularity analysis}
+transfers the local behavior of a generating function at its dominant
+singularity directly into asymptotics of its coefficients. The
+half-integer exponents in the singular expansions are what produce all
+those $\sqrt{N}$'s; the method is developed at book length
+in~\citet{FlajoletSedgewick2009}, with random mappings as a recurring
+worked example. For a mathematician, this is the pleasant surprise of the
+whole subject: questions about iterating a hash function route through
+the local behavior of an analytic function at a branch point.
+
+\subsection{The telescope, pointed at \SHA{}}\label{sec:telescope}
+
+Here is the epistemological payoff. The random-function conjecture of
+\cref{sec:history} predicts that if we build from \SHA{} a self-map of an
+$N$-point space---most simply
+\[
+  \varphi_n : \bitstrings^n \to \bitstrings^n, \qquad
+  \varphi_n(x) = \text{first } n \text{ bits of } \SHA(x),
+\]
+for moderate $n$---then the functional graph of $\varphi_n$, an object
+\SHA{}'s designers never contemplated and certainly never tuned, should
+match every line of the Flajolet--Odlyzko table, not merely in expectation
+but in distribution (the limiting distributions are also known). Each
+parameter is a falsifiable prediction; jointly they are a
+\emph{coordinate system} in which the position of \SHA{} among
+pseudorandom objects can be measured rather than argued about. For
+contrast, structured maps land visibly elsewhere in these coordinates:
+$x \mapsto x \shaplus c$ decomposes into cycles only (no trees: it is a
+bijection), $x \mapsto x^2 \bmod p$ has its graph dictated by quadratic
+reciprocity, and a one-round toy \SHA{} should sit measurably off the
+random silhouette. Where exactly it rejoins the silhouette as rounds are
+added is, as far as we know, unmeasured---and eminently measurable
+(\cref{sec:projects}).
+
+At full scale ($n = 256$, $N = 2^{256}$) nobody will ever traverse a rho:
+the expected rho length is about $2^{128}$ steps. The table is then the
+\emph{only} available description of the global geometry of the object the
+whole world is using---a telescope pointed at a structure we can predict
+in detail but never visit. And the predictions are not idle: they are the
+engineering basis of real algorithms. Pollard's rho
+method~\citep{Pollard1978} finds collisions and discrete logarithms
+precisely by betting that its iteration behaves like a random map (cycle
+detection in $O(\sqrt{N})$ steps with $O(1)$ memory); van Oorschot and
+Wiener's parallel collision search~\citep{vanOorschotWiener1999} turned
+that bet into an industrial discipline (distinguished points, linear
+parallel speedup), and the SHAttered attack's budget of $2^{63}$
+(\cref{sec:falling}) was costed with exactly this calculus. Every time
+such an algorithm's observed running time matches its predicted constant,
+a Flajolet statistic of a real hash function has been confirmed to one
+more decimal place.
+
+So far the telescope has resolved a \emph{single} application of the
+function. Because \SHA{} is so often composed with itself---in password
+stretching, hash chains, and Bitcoin's double hash---the dynamics of
+\emph{iterating} $\varphi$ form their own coordinate system, and
+\cref{sec:iterated} takes it up next: how the image shrinks, where
+orbits settle, and the precise sense in which iteration almost, but not
+quite, induces a random permutation.
+
+\begin{project}{A functional-graph atlas of truncated \SHA{}}
+  {programming; a first probability course}{6--8 weeks (flagship)}
+  For $n = 16, 18, \dots, 30$: exhaustively build the functional graph of
+  $\varphi_n$, measure every parameter in the table above (and the
+  distributions, not just means), and compare with the
+  Flajolet--Odlyzko asymptotics \emph{and} with genuinely random maps of
+  the same size as a control. Deliverable: an ``atlas'' of plots---theory
+  curve, random-map control cloud, \SHA{} data points. Then repeat with
+  reduced-round \SHA{} ($1, 2, 4, \dots, 64$ rounds) and watch the data
+  walk onto the random silhouette as rounds accumulate. To our knowledge
+  no published systematic atlas of this kind exists; undergraduates can
+  own it.
+\end{project}
+
+\begin{project}{Collision hunting, the van Oorschot--Wiener way}
+  {programming; probability}{4--6 weeks}
+  Implement Pollard rho with Brent or Floyd cycle detection on
+  $\varphi_n$ for $n$ up to ${\sim}48$, then the van Oorschot--Wiener
+  distinguished-points parallel method on a lab's worth of machines. Measure the distribution of time-to-collision against the
+  theory of \cref{sec:fungraph}. Students reproduce, at toy scale, the
+  exact methodology of the SHAttered attack---and learn why $256$ bits is
+  chosen so that $\sqrt{N}$ is out of humanity's reach.
+\end{project}
+
+\subsection{Coda: counting to three, and the dials of \SHA{}}
+\label{sec:josephus3}
+
+Before putting the telescope away, we settle a debt incurred in the
+opening paragraph of this paper (\cref{sec:josephus}). The Josephus
+circle there counted to \emph{two}, and the survivor map collapsed to a
+one-bit rotation. What happens when the circle counts to three? The
+answer is known, and it comes---pleasingly---from the same Odlyzko whose
+lens this section has been borrowing~\citep{OdlyzkoWilf1991}. The
+survivor $J_3(n)$ is delivered by a crisp algorithm~\citep[\S 3.3]{GKP1994}:
+iterate $D_0 = 1$, $D_k = \bigl\lceil \tfrac{3}{2} D_{k-1} \bigr\rceil$,
+stop at the first $D_k > 2n$, and take $J_3(n) = 3n + 1 - D_k$. Odlyzko
+and Wilf proved that these iterates admit an exact closed form,
+\[
+  D_k \;=\; \Bigl\lfloor K \bigl(\tfrac{3}{2}\bigr)^{k} \Bigr\rfloor
+  \quad (k = 0, 1, \dots), \qquad
+  K \;=\; 1.62227\,05028\,84767\ldots,
+\]
+so $J_3$, like $J_2$, ``has a formula.'' But inspect the formula. The
+constant $K$ is assembled from the error terms of the very recurrence it
+is supposed to shortcut; no independent characterization of it is known,
+so the only way anyone can evaluate the closed form is to run the
+iteration it was meant to abolish---as the authors say plainly, the
+explicit formula ``is not an improvement over the algorithm.'' Nor is
+this an artifact of technique. For the general iteration
+$f_{n+1} = \lceil \alpha f_n \rceil$ the analogous constant $c(\alpha)$
+is a jagged function of $\alpha$, with jump discontinuities at every
+integer and at every Josephus point $\alpha = q/(q-1)$; and the paper
+closes with a conjecture on the fine distribution of the error terms
+that its authors liken to proving that a given real number is normal in
+a given base---``likely to be very difficult.'' Inside this family the
+solved case is a degenerate point: at $q = 2$ the error terms vanish
+identically, $K(2) = 1$, and the machinery collapses back to the bit
+rotation of \cref{eq:josephus}.
+
+Dwell on what just happened. We did not change the problem; we turned
+one dial by one click, from every-second to every-third, and
+analyzability fell off a cliff---from a closed form a child can verify
+to a constant nobody can compute independently and a conjecture
+calibrated against normality. The collapse that opened this paper was
+not a property of decimation in general. It was an accident of the
+parameter $q = 2$. In the family, wildness is generic; solvability is
+the exception.
+
+\SHA{} deserves to be examined in exactly this light, because its
+definition is also a single point in an evident parameter family, with
+many more dials: the rotation offsets $(2,13,22)$ and $(6,11,25)$ of
+$\Sigma_0$ and $\Sigma_1$, the rotation-and-shift offsets $(7,18;\,3)$
+and $(17,19;\,10)$ of $\sigma_0$ and $\sigma_1$, the word length $32$,
+the round count $64$, the schedule taps $(2,7,15,16)$, the sixty-four
+additive constants $K_t$. Each could have been set otherwise, and asking
+what happens as one is perturbed---the analogue of moving $q$---is a
+legitimate and largely unexplored experimental axis. In one direction
+the family provably degenerates: set the three rotation offsets of
+$\Sigma_0$ equal and the map collapses to a single rotation, as
+transparent as the Josephus shift; drop to an even number of rotation
+summands and invertibility itself dies (\cref{thm:rivest}); move the
+word length off a power of two and the parity law is repealed. The
+published constants are believed to sit in the opposite, generic regime,
+where nothing collapses---but between the degenerate points and the
+conjecturally generic bulk, nobody has mapped the terrain. The
+functional-graph atlas proposed above thus gains a second axis: measure
+the Flajolet coordinates of reduced-round variants not only as rounds
+accumulate but as the rotation and shift amounts are turned away from
+the standard's values, and ask whether the chosen point is
+distinguishable, in any coordinate of the table, from a randomly chosen
+neighbor.

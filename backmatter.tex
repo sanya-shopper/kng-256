@@ -1,0 +1,34 @@
+% ============================================================
+% Shared backmatter: appendix + thematically clustered
+% references. Each cluster is regrouped inside the single .bbl
+% by tools/clusterbbl.py; only cited works print. Green
+% \localpdf marks link to archived copies in refs/.
+% ============================================================
+\appendix
+\input{sections/90-appendix-code}
+
+\clearpage
+\phantomsection\addcontentsline{toc}{section}{References}
+\section*{References}
+
+\noindent{\small The references are grouped by theme rather than
+alphabetically \emph{en masse}, to make the subject's connections
+visible. Green marks ({\color{archgreen}$\blacktriangleright$}) link to
+archived copies in the \texttt{refs/} folder distributed with this
+document (see \texttt{refs/README.md} for provenance); works without a
+mark carry a note saying where to find them.\par}
+
+% \refclusteritem is emitted by tools/clusterbbl.py between entry
+% groups inside the .bbl's single thebibliography environment.
+\newcommand{\refclusteritem}[2]{%
+  \item[]\leavevmode
+  \hspace*{-\leftmargin}%
+  \begin{minipage}{\linewidth}
+    \vspace{0.9em}
+    {\normalsize\bfseries #1}\\[2pt]
+    {\small\itshape #2}
+    \vspace{0.1em}
+  \end{minipage}}
+
+\bibliographystyle{plainnat}
+\bibliography{bib/s1-solvable,bib/s2-prehistory,bib/s3-family,bib/s4-uses,bib/s5-mappings,bib/s6-prng,bib/s7-foundations,bib/s10-provable,bib/s9-differential,bib/s8-computability}

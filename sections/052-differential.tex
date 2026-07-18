@@ -1,0 +1,427 @@
+% ------------------------------------------------------------
+% §6  Differential cryptanalysis: the adversary's calculus
+% ------------------------------------------------------------
+\section{The adversary's calculus: differential cryptanalysis}
+\label{sec:differential}
+
+\Cref{sec:below} reported the adversarial state of the art as bare round
+counts. This section opens the instrument that produces those numbers.
+Differential cryptanalysis is the only mathematical technology that has
+ever killed a member of this design family---it felled MD5, SHA-0, and
+SHA-1 (\cref{sec:falling})---and its core idea is elementary enough to
+state in one line: \emph{since the function cannot be understood, study
+its finite differences instead}. What follows is the calculus itself,
+its startling secret history, the story of its mechanization, and an
+honest account of where, on \SHA{}, it is currently stuck. Readers who
+absorb this section will understand precisely what the ``round counts''
+of \cref{sec:below} measure.
+
+\subsection{A calculus of differences}\label{sec:diffcalc}
+
+For a map $F$ on bit strings and a fixed \emph{input difference}
+$\Delta$, consider the discrete derivative
+\[
+  D_{\Delta}F(x) \;=\; F(x \shaxor \Delta) \,\shaxor\, F(x),
+\]
+the exact finite-difference analogue of differentiation, with $\shaxor$
+playing subtraction in the $\Ftwo$-geometry of \cref{sec:statespace}.
+The adversary's question is distributional: for random $x$, what does
+$D_{\Delta}F(x)$ look like?
+
+Two observations power everything. First, \emph{differencing kills
+constants and linear structure}. If $L$ is $\Ftwo$-linear---a rotation,
+a shift, one of the $\Sigma/\sigma$ maps of \cref{sec:roundshape}---then
+\[
+  D_{\Delta}L(x) \;=\; L(\Delta) \qquad \text{for every } x:
+\]
+the derivative is a \emph{constant}, independent of the unknown input,
+exactly as $\mathrm{d}/\mathrm{d}x$ annihilates constants and
+linearizes. All the values the attacker does not know---the other
+message words, the chaining state, the round constants $K_t$---drop out
+of the linear part of every round. This is why one differentiates: a
+difference propagates through the transparent parts of the circuit
+deterministically, leaving a residue of uncertainty only at the
+nonlinear gates.
+
+Second, at those nonlinear gates---the modular additions $\shaplus$ and
+the quadratic functions $\mathrm{Ch}, \mathrm{Maj}$---a difference does
+not propagate deterministically but \emph{branches into a probability
+distribution over output differences}. The fundamental case is a single
+addition (\cref{fig:diffadd}). Give one addend a one-bit difference at
+position $i$ and add the same unknown $y$ to both members of the pair:
+the two sums differ at bit $i$ certainly, but whether the difference
+stops there is decided by the \emph{carries}, which the $\Ftwo$-lens
+cannot see. If the carries out of position $i$ agree---this happens for
+exactly half of all $(x,y)$---the output difference is again the single
+bit $e_i$; otherwise a carry-difference runs leftward, one further bit
+at a time, each extra bit halving the probability. One position is
+exceptional: a difference in the top bit ($i = 31$) propagates with
+probability $1$, because the disagreeing carry falls off the end of the
+word and is discarded by the reduction mod $2^{32}$. Attackers
+therefore park differences in the most significant bit whenever they
+can---a free move in an economy where everything else costs. The
+complete theory of differential propagation through addition (arbitrary
+difference patterns, exact probabilities, all computable in linear
+time) was worked out by \citet{LipmaaMoriai2001}, and its headline is a
+pleasing cost principle: \emph{the probability of the straight-through
+transition is $2^{-(\text{number of active bits, msb excluded})}$}. To
+first order, difference weight is money, and the exchange rate is a
+factor of two per active bit. The bitwise functions obey the same
+economy: at each bit where its inputs differ, $\mathrm{Ch}$ or
+$\mathrm{Maj}$ passes or absorbs the difference depending on the values
+of the other, unknown operands---a coin flip per active bit, one more
+factor of $\tfrac12$ each.
+
+\begin{figure}[ht]
+  \centering
+  \begin{tikzpicture}[font=\small,
+      cell/.style={draw, minimum width=5.2mm, minimum height=5.2mm,
+                   inner sep=0pt},
+      dbit/.style={cell, fill=red!25},
+      qbit/.style={cell, fill=lenfill},
+      lbl/.style={font=\scriptsize}]
+    % ---------------- left panel: difference at interior bit 3 ------
+    \foreach \i [evaluate=\i as \x using {(7-\i)*0.52}] in {0,...,7} {
+      \ifnum\i=3
+        \node[dbit] (a\i) at (\x,0) {$1$};
+      \else
+        \node[cell] (a\i) at (\x,0) {};
+      \fi
+      \node[lbl, above=0.5mm of a\i] {\i};
+    }
+    \node[lbl, anchor=east] at (-0.55,0) {$\Delta x$};
+    \draw[->] (1.82,-0.45) -- (1.82,-1.25)
+      node[midway, right=1mm, lbl, align=left]
+      {$\shaplus\, y$ (same $y$ on both\\ members of the pair)};
+    \foreach \i [evaluate=\i as \x using {(7-\i)*0.52}] in {0,...,7} {
+      \ifnum\i=3
+        \node[dbit] (b\i) at (\x,-1.7) {$1$};
+      \else
+        \ifnum\i>3 \ifnum\i<7
+          \node[qbit] (b\i) at (\x,-1.7) {?};
+        \else
+          \node[cell] (b\i) at (\x,-1.7) {};
+        \fi
+        \else
+          \node[cell] (b\i) at (\x,-1.7) {};
+        \fi
+      \fi
+    }
+    \node[lbl, anchor=east] at (-0.55,-1.7) {$\Delta(x \shaplus y)$};
+    \draw[->, thick, orange!80!black]
+      (b3.north west) ++(-0.05,0.06) to[bend right=20] (-0.15,-1.05);
+    \node[lbl, orange!80!black, align=right, anchor=east] at (-0.55,-0.85)
+      {carry difference\\ runs leftward};
+    \node[lbl, align=left, anchor=north west] at (-0.6,-2.45)
+      {stops immediately: probability $\tfrac12$\\
+       each further bit: another $\tfrac12$};
+    % ---------------- right panel: msb difference --------------------
+    \begin{scope}[xshift=6.4cm]
+    \foreach \i [evaluate=\i as \x using {(7-\i)*0.52}] in {0,...,7} {
+      \ifnum\i=7
+        \node[dbit] (c\i) at (\x,0) {$1$};
+      \else
+        \node[cell] (c\i) at (\x,0) {};
+      \fi
+      \node[lbl, above=0.5mm of c\i] {\i};
+    }
+    \node[lbl, anchor=east] at (-0.55,0) {$\Delta x$};
+    \draw[->] (1.82,-0.45) -- (1.82,-1.25)
+      node[midway, right=1mm, lbl] {$\shaplus\, y$};
+    \foreach \i [evaluate=\i as \x using {(7-\i)*0.52}] in {0,...,7} {
+      \ifnum\i=7
+        \node[dbit] (d\i) at (\x,-1.7) {$1$};
+      \else
+        \node[cell] (d\i) at (\x,-1.7) {};
+      \fi
+    }
+    \node[lbl, anchor=east] at (-0.55,-1.7) {$\Delta(x \shaplus y)$};
+    \draw[->, thick, gray]
+      (d7.north west) ++(-0.02,0.08) to[bend right=20] ++(-0.5,0.35);
+    \node[lbl, gray, align=left] at (0.6,-0.75) {carry falls\\ off the word};
+    \node[lbl, align=left, anchor=north west] at (-0.6,-2.45)
+      {top bit: probability $1$\\ (the attacker's free move)};
+    \end{scope}
+  \end{tikzpicture}
+  \caption{How a one-bit difference passes through modular addition
+  (bit $7$ = most significant, in this $8$-bit cartoon of a $32$-bit
+  word). \emph{Left:} an interior difference survives unchanged only if
+  the carries agree---probability $\tfrac12$---and every extra bit of
+  carry-difference costs another factor $\tfrac12$---the Lipmaa--Moriai
+  cost formula of the text. \emph{Right:} a difference in the top bit
+  always passes intact, since the disagreeing carry is discarded mod
+  $2^{32}$. Differential cryptanalysis views the whole of \SHA{}
+  through this lens: linear pieces are free wires; every active bit at
+  a nonlinear gate levies a toll of $\tfrac12$.}
+  \label{fig:diffadd}
+\end{figure}
+
+Notice what has happened in the language of \cref{sec:statespace}: the
+attacker has \emph{chosen the $\Ftwo$-geometry} and agreed to pay, in
+probability, at every point where the design invokes the other one. All
+of the analytical cost is concentrated exactly at the carry chains and
+quadratic gates---the terms $\Ftwo$-linear algebra cannot see. There is
+a dual calculus using arithmetic differences $x' - x \bmod 2^{32}$,
+which tames the additions and instead pays at the xors and rotations;
+the craft of the great hash attacks (\cref{sec:craft}) was, in large
+part, the discovery that one should track \emph{both} lenses
+simultaneously, bit by bit, in the form of signed differences. The
+two-geometry tension that \cref{sec:statespace} presented as the
+design's defense is thus also, precisely, the structure of the attack:
+differential cryptanalysis is what the two-lens problem looks like when
+an adversary refuses to give up.
+
+\subsection{Trails, tolls, and free rounds}\label{sec:craft}
+
+A single round is only the first step. A \emph{differential
+characteristic} (or \emph{trail}) prescribes a difference for every
+intermediate quantity through all the rounds---a full flight plan for
+the perturbation---and, under a heuristic independence assumption, its
+probability is the \emph{product} of the per-gate transition
+probabilities along the way. An attacker who wants a collision needs a
+trail beginning at a nonzero message difference and ending, after the
+feedforward, at state difference \emph{zero}; if the trail has
+probability $p$, then about $1/p$ random conforming attempts are
+expected before one message pair follows the entire flight plan and the
+hashes agree. The attack economy is thus brutally simple: \emph{total
+toll} $=$ sum, over all rounds, of active bits at nonlinear gates;
+\emph{cost} $\approx 2^{\text{toll}}$; the design's job is to force
+every possible flight plan to accumulate an unpayable toll.
+
+\begin{figure}[ht]
+  \centering
+  \begin{tikzpicture}[font=\small,
+      inj/.style={draw, fill=red!25, minimum width=8mm, minimum height=5mm,
+                  font=\scriptsize},
+      cor/.style={draw, fill=msgfill, minimum width=8mm, minimum height=5mm,
+                  font=\scriptsize},
+      non/.style={draw, fill=white, minimum width=8mm, minimum height=5mm},
+      lbl/.style={font=\scriptsize}]
+    % round axis
+    \foreach \r/\x in {t/0, t+1/1.15, t+2/2.3, t+3/3.45, t+4/4.6, t+5/5.75}
+      \node[lbl] at (\x, 2.15) {$\r$};
+    \node[lbl, anchor=east] at (-0.9, 1.55) {message diff.\ $\delta W$};
+    \node[inj] at (0,1.55) {seed};
+    \foreach \x in {1.15, 2.3, 3.45, 4.6, 5.75}
+      \node[cor] at (\x,1.55) {corr.};
+    % state difference weight bars
+    \node[lbl, anchor=east] at (-0.9, 0.6) {state diff.\ weight};
+    \draw[->] (-0.55,0.05) -- (7.0,0.05);
+    \fill[red!50]    (-0.2,0.05) rectangle (0.25,0.65);
+    \fill[red!35]    (0.95,0.05) rectangle (1.4,0.5);
+    \fill[red!35]    (2.1,0.05) rectangle (2.55,0.5);
+    \fill[red!35]    (3.25,0.05) rectangle (3.7,0.42);
+    \fill[red!25]    (4.4,0.05) rectangle (4.85,0.3);
+    \draw[very thick, projframe] (5.55,0.05) -- (7.0,0.05)
+      node[pos=0.6, above, lbl, projframe] {zero again};
+    % toll ledger
+    \node[lbl, anchor=east] at (-0.9,-0.55) {toll this round};
+    \foreach \x/\p in {0/2^{-1}, 1.15/2^{-3}, 2.3/2^{-3}, 3.45/2^{-2},
+                       4.6/2^{-2}, 5.75/2^{-1}}
+      \node[lbl] at (\x,-0.55) {$\p$};
+    \node[lbl, anchor=west] at (6.35,-0.55) {$\Rightarrow\ \prod = 2^{-12}$};
+    \draw[decorate, decoration={brace, mirror, amplitude=5pt}]
+      (-0.35,-0.95) -- (6.1,-0.95)
+      node[midway, below=6pt, lbl]
+      {one \emph{local collision}: inject, shepherd, cancel};
+  \end{tikzpicture}
+  \caption{Cartoon of a \emph{local collision}, the modular building
+  block of every attack on this family since Chabaud and Joux's 1998
+  analysis of SHA-0 (cited in the text): a seed difference is injected
+  through one
+  message word, then five successive message-word corrections shepherd
+  and finally cancel the disturbance, leaving the state clean. Each
+  round levies its toll (\cref{fig:diffadd}); the trail's probability
+  is the product. A full attack chains many local collisions along a
+  pattern compatible with the message schedule---and the toll of the
+  best full trail is what decides whether the design lives or dies.}
+  \label{fig:localcollision}
+\end{figure}
+
+Three refinements turn this arithmetic into the attacks of
+\cref{sec:falling}, and all three are conceptually simple. First,
+\emph{local collisions} (\cref{fig:localcollision}): rather than one
+monolithic trail, the attacker builds a short pattern---inject a
+difference through one message word, cancel it a few rounds later
+through others---and then chains copies of the pattern wherever the
+message schedule permits~\citep{ChabaudJoux1998}. Second, \emph{message
+freedom}: for the first sixteen rounds the words $W_t$ are the message
+itself (\cref{sec:roundshape}), so the attacker does not \emph{hope}
+the early tolls are paid---she \emph{solves} for message bits that pay
+them deterministically. Wang's celebrated breaks of MD5 and
+SHA-1~\citep{WangYu2005, WangYinYu2005} rested on pushing this
+``message modification'' astonishingly deep; the practical effect is
+that the toll meter starts running only around round $17$, and the
+first quarter of the function contributes nothing to its own defense.
+Third, \emph{automation}: what Wang's school did by virtuosic hand
+calculation---juggling xor- and arithmetic-differences as signed,
+bit-level conditions---was recast by \citet{DeCanniereRechberger2006}
+as a constraint-propagation search over ``generalized conditions,''
+mechanically discovering trails no human would find. The current
+records on \SHA{} are held by exactly this lineage of tools, now
+built on MILP, \textsc{sat}, and \textsc{smt}
+solvers~\citep{MendelNadSchlaffer2013, LiLiuWang2024}, closing the loop
+with \cref{sec:npsearch}: the adversary's calculus has itself become a
+branch of solver engineering.
+
+\subsection{A method twenty years secret}\label{sec:secrethistory}
+
+The published history begins in 1990, when Biham and Shamir announced
+differential cryptanalysis and used it to attack reduced variants of
+DES, the American encryption standard of
+1977~\citep{BihamShamir1991}. A curiosity surfaced immediately: DES,
+designed in the early 1970s, was \emph{strangely well prepared} for the
+new attack. Its nonlinear tables were, component for component, close
+to optimally resistant; the method that broke every academic variant
+of DES bounced off the real thing.
+
+The explanation arrived in 1994, and it is one of the most remarkable
+documents in the literature. Coppersmith, of the original IBM design
+team, was cleared to reveal the design criteria and wrote them down
+plainly: the IBM team had discovered differential cryptanalysis
+themselves---internally, the ``T-attack''---\emph{in 1974}, and
+hardened DES against it before standardization; the NSA, consulted on
+the design, asked that the rationale be kept secret, since publishing
+the criteria ``would reveal the technique of differential
+cryptanalysis, a powerful technique that can be used against many
+ciphers''~\citep{Coppersmith1994}. The central tool of public
+cryptanalysis was thus twenty years old on the day it was discovered.
+For sixteen of those years, every open researcher who studied DES was
+probing defenses calibrated against a weapon whose existence they did
+not suspect.
+
+This is not merely a good story; it is a load-bearing datum for the
+epistemology of \cref{sec:epistemology}, because the pattern
+\emph{repeats within our own object's lineage}. Recall the footnote of
+\cref{sec:history}: in 1994--95 the NSA withdrew SHA-0 and changed a
+single rotation, citing an undisclosed weakness; the public rediscovery
+of what that tweak defends against---a differential collision
+attack---took until 1998~\citep{ChabaudJoux1998}. Twice measured, the
+gap between the classified and the public understanding of this exact
+attack has been twenty years and four years. The honest inference for a
+naturalist: the map of \cref{sec:below} is the \emph{public} frontier,
+a lower bound on the true state of knowledge, drawn by a community that
+has historically been behind by years to decades---and \SHA{}'s design
+parameters were set by the party that was ahead. The comfort and the
+discomfort of that fact are left to the reader to apportion.
+
+\subsection{The siege of \SHA{}, and where it stands}\label{sec:siege}
+
+Why did the calculus shatter MD5 and SHA-1 while \SHA{}, made of the
+same primitives, holds? The anatomy of \cref{sec:roundshape} contains
+the visible answers. SHA-1's message schedule is entirely
+$\Ftwo$-linear, so schedule differences propagate by exact linear
+algebra and \emph{sparse} schedules---low total weight, hence low
+toll---can be found by searching a linear code for low-weight words;
+this is precisely the handle the collision attacks
+gripped (\cref{sec:hope}). \SHA{} interleaves modular additions into
+the schedule itself and taxes every round twice over: each of
+$\Sigma_0, \Sigma_1$ fans any single active bit into three, both tracks
+of the two-track recurrence pass through a quadratic gate every round,
+and the $\sigma$-mixing makes a sparse schedule difference bloom
+within a few steps. The result, empirically: low-toll trails simply
+stop existing a dozen-odd rounds past the free zone, and two decades of
+search---human, then mechanical---have moved the frontier only from
+about $19$ rounds (2006) to $31$ rounds (collisions) today. The precise
+current records: practical colliding pairs for $28$ rounds and a
+$2^{65.5}$ collision attack on $31$ rounds of the $64$, both from the
+automated-search school~\citep{MendelNadSchlaffer2013}; practical
+\emph{semi-free-start} collisions (the attacker may choose the chaining
+value, removing the Merkle--Damg{\aa}rd anchor of \cref{thm:md}) for
+$38$ rounds in 2013 and $39$ rounds in 2024, the latter found with a
+\textsc{sat}/\textsc{smt} trail search~\citep{LiLiuWang2024,
+AlamgirNejatiBright2024}; and, on the inversion side, preimages to $45$
+rounds at a cost indistinguishable from brute
+force~\citep{KRS2012}. Li, Liu, and Wang open their record-setting 2024
+paper with the flat sentence that ``there is almost no progress in
+collision attacks on SHA-2 after ASIACRYPT 2015''---a decade of solver
+revolutions purchasing one round.
+
+The shape of the stall is worth internalizing, because it is the
+quantitative content of the phrase ``security margin.'' Rounds $1$--$16$
+are free (message freedom); rounds $17$ to roughly $40$ are the
+contested zone, where automated searches still find trails but each
+round multiplies the toll; beyond that, \emph{no usable trail has ever
+been exhibited}, not because a theorem forbids one but because every
+known search method drowns. The design's $64$ rounds thus stand at
+about twice the depth the best siege engines have ever reached with
+unlimited choice of starting position. Whether that factor of two is a
+fortress wall or a picket fence is exactly the question
+\cref{sec:falling} showed nobody can answer from first principles: no
+theory predicts the frontier's future velocity, and the SHA-1
+precedent---from academic $2^{69}$ to industrial collision in twelve
+years---is the reason nobody treats the margin as a moat. (One further
+credential: the compression function's core, extracted and run as a
+block cipher under the name SHACAL-2, survived the open European
+NESSIE evaluation and was selected for its 2003 portfolio---the same
+engine vetted from a second angle, as a cipher rather than a hash.)
+
+For this paper's program the moral is double. The adversary's calculus
+is the most refined body of exact knowledge about \emph{reduced}
+members of the family---every trail is a theorem-with-certificate about
+a specific truncation, machine-checkable pair in hand---and at the same
+time it is purely \emph{local} knowledge: a trail certifies one orbit
+of one difference, and says nothing global about the map. The
+statistical coordinates of \cref{sec:randommaps} and the trail calculus
+of this section are complementary instruments, and to our knowledge no
+one has systematically pointed them at the same scaled-down family to
+see whether the round where trails die is the round where the Flajolet
+silhouette locks in (\cref{sec:projects}).
+
+\begin{project}{Differential trails in miniature}{probability;
+  programming; patience with bit manipulation}{4--6 weeks}
+  Build the toll calculus for a toy \SHA{} on $8$-bit words. First
+  verify \cref{fig:diffadd} empirically: tabulate the exact
+  distribution of $\Delta(x \shaplus y)$ over all pairs for every
+  one-bit $\Delta x$, and check the Lipmaa--Moriai
+  cost formula~\citep{LipmaaMoriai2001}. Then implement a
+  branch-and-bound search for the lowest-toll trail through $r$ rounds
+  of the toy compression function and plot $\log_2(\text{best trail
+  probability})$ against $r$. Two landmarks make the plot speak: the
+  birthday line ($-n/2$ for an $n$-bit toy state), below which a trail
+  is useless to an attacker, and the round at which your search itself
+  starts to drown. You will have reproduced, at fruit-fly scale, both
+  the designer's round-count decision and the attacker's wall---the two
+  sides of \cref{sec:siege}---and the same code instruments the
+  comparative questions of \cref{sec:projects}.
+\end{project}
+
+\subsection{Coda: can a machine learn the difference?}\label{sec:mlcrypt}
+
+One newer thread deserves flagging, because it closes a loop with the
+proof-barrier of \cref{sec:barriers} in a way that is either profound or
+a curiosity, and nobody yet knows which. In 2019 Gohr trained a neural
+network to distinguish the outputs of a round-reduced ARX cipher
+(Speck, a near-relative of \SHA{}'s primitives) from random, and it
+\emph{beat} the best hand-built differential distinguishers---and, on
+inspection, had learned features \emph{beyond} the difference
+distribution table, correlations the human theory of \cref{sec:diffcalc}
+does not track~\citep{Gohr2019}. Read against Razborov--Rudich
+(\cref{sec:barriers}), this is quietly startling. A trained
+distinguisher \emph{is} a natural property in their precise sense---an
+efficiently computable, large predicate that separates the function
+from random---so a machine that reliably learns such properties on
+\SHA{}-family maps would be walking, empirically, along the exact edge
+the natural-proofs barrier says cannot be crossed at full scale.
+Whether the network finds real, nameable structure (extractable back
+into human mathematics, in the spirit of \cref{sec:hope}) or merely a
+more efficient encoding of the same statistical residue is, at present,
+an open and very testable question---and a natural apex to the
+undergraduate program, where a student can point a modern learning tool
+at a scaled-down family and see, concretely, what a machine can and
+cannot pull out of manufactured randomness.
+
+\begin{project}{A neural distinguisher at toy scale}{programming;
+  a machine-learning course}{6--8 weeks (flagship)}
+  Reproduce Gohr's experiment~\citep{Gohr2019} on a \SHA{}-family toy:
+  train a small network to distinguish $r$-round outputs (or output
+  differences) from random, and chart its advantage against $r$
+  alongside the trail-toll curve of the miniature-trails project above
+  and the statistical-battery frontier of \cref{sec:gap}. Then
+  ask the hard question: \emph{interpret} the trained model---does its
+  decision reduce to a differential-distribution feature the human
+  theory already knows (\cref{sec:diffcalc}), or to something new? A
+  negative result is a clean measurement; a positive one is the first
+  thread of a natural property in a real hash family, and worth far
+  more than a course grade.
+\end{project}
