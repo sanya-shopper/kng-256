@@ -1,0 +1,67 @@
+% ------------------------------------------------------------
+% §B  Appendix: the w=8 centralizer census
+% ------------------------------------------------------------
+\section{Reference implementation: the centralizer census}
+\label{app:censuscode}
+
+The listing below (\texttt{tools/centralizer\_census.py} in the
+distribution accompanying this document) is the computational companion
+to \cref{sec:statespace}: it produces every number in \cref{tab:census}
+and the surrounding text---the three-regime sorting of the narrowed
+components, the random baselines that calibrate it, and the
+Anashin-style ablation in which a single rotation collapses a
+$2$-adically ergodic map onto random-permutation statistics. As with
+\cref{app:sigmacode}, the point of printing it in full is
+epistemological: every claim it supports becomes an artifact anyone
+can audit and rerun (about ten seconds), rather than an argument to be
+trusted.
+
+The script has five movements, signposted in its comments.
+
+First, the \emph{narrowed components}: the standard's diffusion and
+chooser maps at word width $w = 8$ (rotation amounts reduced mod $8$,
+round constants cut to their leading bytes), together with the bare
+odometer $x \shaplus \mathtt{0xb5}$ and its one- and two-fold ARX
+alternations. The selection is not neutral---it is chosen so that each
+of the three regimes predicted in \cref{sec:statespace} (linear:
+over-symmetric; odometer: under-symmetric; alternation: generic) is
+represented and can confirm or embarrass the prediction.
+
+Second, the \emph{exact counting machinery}. For a permutation $f$,
+both the centralizer of $f$ in $\mathrm{Sym}(256)$ and the number of
+arbitrary self-maps commuting with $f$ are closed-form functions of
+the cycle type (the latter by a two-line argument recorded in a
+docstring: a commuting $g$ is free on one point per cycle, and that
+image point must be periodic of compatible period). For a
+non-bijection no closed form exists, and the script instead counts
+endomorphisms of the functional graph by dynamic programming over its
+cycle-and-trees anatomy---enumeration is hopeless, since the answers
+run to $10^{140}$. The counter self-tests against brute-force
+enumeration on small domains before any census is reported.
+
+Third, the \emph{structured classes} of \cref{tab:census}---the
+translations $x \shaplus c$, the xor-translations $x \shaxor c$, and
+the affine-circulant maps $x \mapsto L(x) \shaxor c$---checked
+exhaustively. These are the symmetries an analyst could actually
+exploit, each transparent in one of the state space's two rival
+geometries; a nontrivial commuting member would be exactly the kind of
+symmetry that, one regularity class up, Lubin's rigidity theorem
+(\cref{thm:lubin}) says cannot exist without algebraic cause.
+
+Fourth, the \emph{baselines}: $10^{4}$ random permutations and
+$10^{2}$ random maps, which convert raw counts into percentiles---and
+the calibrating observation, verified rather than assumed, that a
+generic permutation's only structured symmetries are the constant maps
+sitting at its Poisson-distributed fixed points.
+
+Fifth, the \emph{ablation}: Anashin's transitivity mod $2^{k}$
+\citep{Anashin2006} verified through $k = 16$ for the odometer and for
+the Klimov--Shamir T-function $x \shaplus (x^{2} \vee
+5)$~\citep{KlimovShamir2003}, then broken with one rotation and the
+wreckage measured in the random-mapping coordinates of
+\cref{sec:randommaps}~\citep{FlajoletOdlyzko1990}---down to the
+frozen-bit ``scar'' by which the $1$-Lipschitz substrate stays visible
+even after ablation.
+
+\medskip
+\lstinputlisting[language=Python]{tools/centralizer_census.py}

@@ -36,9 +36,9 @@ ergodicity), then a single rotation is composed in and the cycle
 statistics collapse onto the Flajolet--Odlyzko random-permutation
 profile.
 
-All counts are exact integers; the search routine self-tests against
+All counts are exact integers; the counting routines self-test against
 brute-force enumeration on small domains before anything is reported.
-Pure stdlib; runs in about a minute.
+Pure stdlib; runs in about ten seconds.
 """
 import math
 import random
@@ -62,35 +62,44 @@ def rotr(x, r, w=W):
 # --- narrowed components ------------------------------------------------
 # Rotation amounts are the standard's, reduced mod 8; shift amounts are
 # reduced mod 8 as well (a shift by >= 8 would annihilate the word).
-def Sigma0(x):  # ROTR 2,13,22  ->  2,5,6
+# The list is chosen to probe the paper's three predicted regimes:
+# the pure F_2-linear diffusion layers (expected: over-symmetric), the
+# pure 2-adic odometer (expected: under-symmetric -- it commutes with
+# all of its own powers and nothing else), and their alternation
+# (expected: symmetry statistics of a random permutation).  That is
+# the ARX design thesis in miniature, made measurable.
+def Sigma0(x):  # ROTR 2,13,22 -> 2,5,6.  F_2-linear, wild 2-adically.
     return rotr(x, 2) ^ rotr(x, 5) ^ rotr(x, 6)
 
 
-def Sigma1(x):  # ROTR 6,11,25  ->  6,3,1
+def Sigma1(x):  # ROTR 6,11,25 -> 6,3,1.  Ditto.
     return rotr(x, 6) ^ rotr(x, 3) ^ rotr(x, 1)
 
 
-def sigma0(x):  # ROTR 7,18, SHR 3  ->  ROTR 7,2, SHR 3
-    return rotr(x, 7) ^ rotr(x, 2) ^ (x >> 3)
+def sigma0(x):  # ROTR 7,18, SHR 3 -> ROTR 7,2, SHR 3.  The shift makes
+    return rotr(x, 7) ^ rotr(x, 2) ^ (x >> 3)  # it non-circulant.
 
 
-def sigma1(x):  # ROTR 17,19, SHR 10  ->  ROTR 1,3, SHR 2
-    return rotr(x, 1) ^ rotr(x, 3) ^ (x >> 2)
+def sigma1(x):  # ROTR 17,19, SHR 10 -> ROTR 1,3, SHR 2.  Rank-deficient
+    return rotr(x, 1) ^ rotr(x, 3) ^ (x >> 2)  # at w=8: not a bijection.
 
 
-def addK(x):  # the bare odometer step
+def addK(x):  # the bare odometer: 1-Lipschitz, single 256-cycle (K odd)
     return (x + KA) & MASK
 
 
-def arx1(x):  # one ARX alternation: add, then rotate-xor diffusion
+def arx1(x):  # ONE ARX alternation: add (2-adic), then rotate-xor (F_2)
     return Sigma0((x + KA) & MASK)
 
 
-def arx2(x):  # two alternations
+def arx2(x):  # two alternations: does the generic regime persist?
     return Sigma1((arx1(x) + KB) & MASK)
 
 
-def chdiag(x):  # Ch(e,f,g) = (e&f)^(~e&g) on rotated copies, then add
+def chdiag(x):  # the round's chooser Ch(e,f,g) = (e&f)^(~e&g), made a
+    # self-map by feeding it rotated copies of one word: the census's
+    # nonlinear NON-bijection (image size < 256), probing the regime
+    # where commutant counts become functional-graph statistics.
     ch = (x & rotr(x, 2)) ^ (~x & MASK & rotr(x, 5))
     return (ch + KA) & MASK
 
@@ -104,6 +113,10 @@ COMPONENTS = [
 
 
 # --- cycle-type closed forms (f a permutation) --------------------------
+# For a permutation, every centralizer question below is a function of
+# the cycle type alone -- the "symmetry mass" of f is readable off its
+# orbit structure, which is why the paper can compare components to
+# random permutations by comparing cycle types.
 def cycle_type(tab):
     n = len(tab)
     seen = [False] * n
@@ -161,6 +174,13 @@ def count_commuting_maps(tab):
         computed leaves-first, so the total per component is
             sum_{w : f^k(w) = w} prod_j prod_{c child of z_j} cnt[c][f^j(w)]
         over the cycle nodes z_j.
+
+    Interpretive caveat used in the text: for a NON-bijection this
+    count is dominated by collapsing endomorphisms (maps folding trees
+    onto each other), so it measures the shape of f's functional graph
+    -- a Flajolet--Odlyzko-style statistic -- more than any hidden
+    algebra.  The sharp structurelessness claims live in the
+    permutation rows and the structured-class censuses.
     """
     n = len(tab)
     preim = [[] for _ in range(n)]
@@ -265,6 +285,16 @@ def brute_commuting_maps(tab):
 
 
 # --- structured-class censuses ------------------------------------------
+# The raw centralizer counts above answer "how much symmetry"; these
+# censuses answer "any symmetry an analyst could USE?".  The classes are
+# the maps simple in the state space's two rival geometries (the paper's
+# sec on the two group laws): translations x+c (2-adic side), xor
+# translations x^c and xors-of-rotations (F_2 side), and their affine
+# combination.  A nontrivial commuting member g would be a genuine
+# self-reduction of f -- Lubin's theorem is the warning, one regularity
+# class up, that such a symmetry drags hidden algebraic structure with
+# it.  Finding none, against a calibrated baseline, is the measurement
+# of structurelessness the text asks for.
 def commuting_in_class(tab, gens):
     """Count g in a finite class of candidate maps with g f = f g."""
     n = len(tab)
@@ -300,6 +330,11 @@ def affine_circulant_commutant(tab):
 
 
 # --- F_2 linear algebra -------------------------------------------------
+# For the F_2-linear components the FULL linear commutant {M : MF = FM}
+# is exactly computable: MF = FM is a linear (Sylvester-type) system in
+# M's w^2 entries over F_2.  This is how the census certifies, e.g.,
+# that narrowed Sigma_0's linear symmetries are exactly the 2^8
+# xors-of-rotations (the circulant algebra F_2[ROTR]) and nothing more.
 def linear_cols(tab):
     """Column bitmasks of tab's matrix if tab is F_2-linear, else None."""
     if tab[0] != 0:
@@ -352,6 +387,16 @@ def matrix_rank(cols):
 
 
 # --- Anashin / ablation -------------------------------------------------
+# Anashin's theorem: a 1-Lipschitz map of Z_2 is ergodic iff it is
+# transitive on Z/2^k for every k -- i.e. iff it is a single 2^k-cycle
+# at every truncation.  That infinite hierarchy has a finite shadow we
+# can check outright; then composing in ONE rotation (the operation
+# that is F_2-linear but 2-adically discontinuous) destroys the
+# hierarchy, and the cycle statistics collapse onto the random-
+# permutation profile of Flajolet--Odlyzko (expected #cycles ~ ln N +
+# gamma, expected longest-cycle fraction the Golomb--Dickman constant
+# 0.6243...).  This is the project box's "break the hypotheses and
+# measure what dies", run to completion.
 def single_cycle_lengths(step, kmax):
     """Largest k <= kmax such that the map is a single 2^k-cycle for
     every k' <= k (transitivity mod 2^k -- ergodicity's finite shadow)."""
@@ -380,7 +425,14 @@ def cycle_stats(tab):
 
 def truncation_spread(step, k, low):
     """Average #distinct low-`low`-bit outputs over each residue class
-    mod 2^low (1 for a T-function; ~2^low (1 - 1/e) for random)."""
+    mod 2^low (1 for a T-function; ~2^low (1 - 1/e) for random).
+
+    Measures what remains of 1-Lipschitz causality (output bit i
+    depends only on input bits 0..i) after ablation.  The measured
+    value for the rotated map is exactly 128 = 2^7: seven of the low
+    byte's bits scatter fully, but one bit -- bit 7 of the T-function
+    output, carried into the low byte by ROTR^7 -- stays frozen when
+    the input's low byte is fixed.  The substrate leaves a scar."""
     n, lm = 1 << k, (1 << low) - 1
     spread = 0
     for a in range(1 << low):
@@ -421,6 +473,13 @@ def main():
     tabs = {name: [f(x) for x in range(N)] for name, f in COMPONENTS}
 
     # random baselines --------------------------------------------------
+    # The counts only mean something against the null hypothesis "f is
+    # a uniformly random (permutation | map) of 256 points".  Random
+    # permutations are cheap to sample in bulk (their statistics are
+    # cycle-type functions); the affine-circulant census over random
+    # permutations calibrates how many "accidental" structured
+    # symmetries a generic permutation carries -- in practice the
+    # constant map at each fixed point, Poisson(1) many on average.
     print("=== random baselines on 256 points ===")
     perm_cent, perm_comm = [], []
     base = list(range(N))

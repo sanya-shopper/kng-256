@@ -348,8 +348,10 @@ genuinely hard to achieve by accident.
 
 This paper's distribution runs a first leg of that hunt
 (\texttt{tools/centralizer\_census.py}: a few hundred lines of stdlib
-Python, about a minute of computation, self-testing against brute-force
-enumeration on small domains before reporting anything). Narrow every
+Python, about ten seconds of computation, self-testing against
+brute-force enumeration on small domains before reporting anything;
+the full listing, with a guide to its five movements, is
+\cref{app:censuscode}). Narrow every
 word to $w = 8$ bits---rotation amounts reduced mod $8$, round constants
 cut to their leading bytes---and each component becomes a self-map of
 $256$ points on which every centralizer question is exactly decidable.
@@ -390,7 +392,8 @@ distribution spanning $10^{3.8}$ to $10^{10.3}$---the census sorts
     \bottomrule
   \end{tabular}
   \caption{The $w=8$ centralizer census
-  (\texttt{tools/centralizer\_census.py}). $|C_{\mathrm{Sym}}|$ is the
+  (\texttt{tools/centralizer\_census.py}, listed in
+  \cref{app:censuscode}). $|C_{\mathrm{Sym}}|$ is the
   exact number of permutations of the $256$-point word space commuting
   with the map, computed from the cycle type; ``pct.''\ its percentile
   among $10^{4}$ uniform random permutations ($100$ and $0$ mean beyond
@@ -474,10 +477,10 @@ alternation, and \cref{sec:falling} showed how much such specifics matter.
   orbits, then break the hypotheses with a single rotation and measure
   what dies. A perfect first encounter with $p$-adic ideas producing
   visible, computable phenomena.
-  (\texttt{tools/centralizer\_census.py} already runs the $w=8$
-  warm-up---the single-orbit checks, the rotation ablation, and the
-  centralizer census of \cref{tab:census}---and is written to be
-  extended.)
+  (\texttt{tools/centralizer\_census.py}, listed in
+  \cref{app:censuscode}, already runs the $w=8$ warm-up---the
+  single-orbit checks, the rotation ablation, and the centralizer
+  census of \cref{tab:census}---and is written to be extended.)
 \end{project}
 
 \subsection{The compression function, structurally}
