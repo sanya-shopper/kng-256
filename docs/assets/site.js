@@ -4,6 +4,7 @@
 
   var PAGES = [
     { file: "index.html",          num: "",  title: "Overview & contents" },
+    { file: "explorer.html",       num: "",  title: "⚙ Round explorer (live)" },
     { file: "01-josephus.html",    num: "1", title: "A pattern where none was promised" },
     { file: "02-history.html",     num: "2", title: "The object, observed from outside" },
     { file: "03-geometry.html",    num: "3", title: "Anatomy: a self-map of a finite space" },
@@ -61,7 +62,7 @@
           var sub = el("ul", { "class": "subnav" });
           subs.forEach(function (h) {
             var clone = h.cloneNode(true);
-            clone.querySelectorAll(".pdf-ref").forEach(function (c) { c.remove(); });
+            clone.querySelectorAll(".pdf-ref, .live-ref").forEach(function (c) { c.remove(); });
             var txt = clone.textContent.replace(/\\[()]/g, "").replace(/\s+/g, " ").trim();
             var sli = el("li", {});
             sli.appendChild(el("a", { href: "#" + h.id }, txt));
