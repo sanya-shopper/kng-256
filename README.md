@@ -13,6 +13,25 @@ make            # runs latexmk -pdf main.tex → main.pdf
 make clean
 ```
 
+## Interactive site (`docs/`)
+
+`docs/` holds a static, browsable companion site: the paper's core text in
+full, with the figures rebuilt as interactive JavaScript visualizations
+(live SHA-256 avalanche, message-schedule diffusion, random-map ρ shapes,
+the iteration funnel, hypercube-walk cutoff, ⊞-differentials, …) and every
+section/figure cross-linked to its exact page in `kng256.pdf`.
+
+- **Preview locally:** `python3 -m http.server -d docs` (the tracked
+  `kng256.pdf` must be copied to `docs/kng256.pdf` once for the PDF links;
+  that copy is gitignored).
+- **Deploy:** push to GitHub and set *Settings → Pages → Source: GitHub
+  Actions*. `.github/workflows/pages.yml` bundles the PDF and publishes
+  `docs/` on every push to `main`.
+
+Math renders via KaTeX (CDN); the visualization code is dependency-free
+vanilla JS in `docs/assets/viz.js` (SHA-256 core verified against FIPS
+test vectors).
+
 Requires a TeX Live installation (tested with TeX Live 2026).
 
 ## Layout

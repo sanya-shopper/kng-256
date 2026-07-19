@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>§6 · Frameworks, and the size of the gap — SHA-256 as a Mathematical Object</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="06-frameworks.html">
+<div class="layout">
+<nav id="sidebar"></nav>
+<main id="content">
+<header class="page-head">
+  <p class="doc-title"><a href="index.html">SHA-256 as a Mathematical Object</a></p>
+</header>
+
+<h1 id="sec:frameworks">§6&ensp;Frameworks, and the size of the gap <a class="pdf-ref" href="kng256.pdf#page=31" title="Open this section in the PDF">PDF&nbsp;p.&nbsp;31</a></h1>
+
+<p>We now assemble the existing theoretical apparatus around <span class="sha">SHA-256</span> and take
+honest stock of how far it reaches. The summary in advance: there are
+mature frameworks on <em>both</em> sides of the object&mdash;idealized models
+above it, empirical and cryptanalytic measurements below it&mdash;and a
+canyon in the middle where the function itself lives.</p>
+
+<h2 id="sec:definitions">6.1&ensp;What &ldquo;pseudorandom&rdquo; officially means <a class="pdf-ref" href="kng256.pdf#page=32">PDF p. 32</a></h2>
+
+<p>The foundational definitions of pseudorandomness are about
+<em>families</em>, not single objects. A pseudorandom function family in
+the sense of Goldreich, Goldwasser, and Micali&nbsp;<a class="cite" href="bibliography.html#GGM1986">(Goldreich et al., 1986)</a> is a keyed
+collection \(\{F_k\}\) such that no efficient algorithm, allowed to query a
+black box, can tell a randomly keyed \(F_k\) from a truly random function
+with nonnegligible advantage. This definition is a triumph&mdash;it supports
+composition theorems, equivalences, a whole complexity theory of
+randomness&mdash;but notice that it <em>cannot even be stated</em> for the
+fixed, keyless, public function <span class="sha">SHA-256</span>. For any fixed function, a trivial
+<em>distinguisher</em> exists. A distinguisher is the formal adversary in
+these definitions: an efficient algorithm that queries a black box
+containing either the function under test or a truly random function,
+emits a one-bit verdict, and is scored by its <em>advantage</em>, the gap
+between its acceptance probabilities in the two worlds. The notion
+descends from Yao&rsquo;s theory of computational
+indistinguishability&nbsp;<a class="cite" href="bibliography.html#Yao1982">(Yao, 1982)</a> and receives its textbook treatment
+in Chapter&nbsp;3 of&nbsp;Goldreich <a class="cite" href="bibliography.html#Goldreich2001">(2001)</a>. In our context the trivial
+distinguisher simply hard-codes one known value: query the box at
+\(\mathsf{0}\) and accept if the answer is the published
+\(\SHA(\mathsf{0})\). Against <span class="sha">SHA-256</span> it accepts always; against a random
+function, with probability \(2^{-256}\); its advantage is essentially \(1\),
+and no keyless public function escapes it. The same
+foundational awkwardness afflicts collision resistance: since collisions
+exist by pigeonhole, &ldquo;no efficient algorithm finds one&rdquo; is technically
+false&mdash;some two-line program prints a collision; humanity just cannot
+exhibit it. Rogaway&rsquo;s &ldquo;human ignorance&rdquo; formalism&nbsp;<a class="cite" href="bibliography.html#Rogaway2006">(Rogaway, 2006)</a>
+repairs the semantics by making theorems constructive (explicit
+reductions transforming any breaker of a protocol into an explicit
+collision-finder), and it is the honest logical home of every security
+claim about <span class="sha">SHA-256</span>. But note what has happened: <em>the definition of
+success has been moved from mathematics into history</em>&mdash;&ldquo;no one has
+written down a collision, so far.&rdquo;</p>
+
+<h2 id="sec:models">6.2&ensp;Idealized models: reasoning above the object <a class="pdf-ref" href="kng256.pdf#page=32">PDF p. 32</a></h2>
+
+<p>Protocol designers escape upward. In the random-oracle
+model&nbsp;<a class="cite" href="bibliography.html#BellareRogaway1993">(Bellare and Rogaway, 1993)</a> one simply <em>postulates</em> a public
+uniformly random function and proves protocols secure relative to it; the
+leap back to <span class="sha">SHA-256</span> is heuristic, frankly acknowledged, and empirically
+successful. The model even has an internal quality-control theory:
+<em>indifferentiability</em>&nbsp;<a class="cite" href="bibliography.html#MRH2004">(Maurer et al., 2004)</a> asks whether a construction
+built from an ideal component is safely interchangeable with an ideal
+whole, and by this standard plain Merkle&ndash;Damg&aring;rd <em>fails</em>&mdash;the
+length-extension property (from \(\SHA(m)\) anyone computes
+\(\SHA(m \Vert \mathrm{pad} \Vert m')\) without knowing \(m\)) is a genuine,
+exploitable deviation from random-oracle behavior, identified precisely
+and repaired by variants with security proofs&nbsp;<a class="cite" href="bibliography.html#CDMP2005">(Coron et al., 2005)</a>. This is
+the theory at its best: it cannot certify \(f\) itself, but given an
+idealized \(f\) it classifies <em>constructions</em> completely. The
+architecture above the compression function is, in a real sense, solved
+mathematics&mdash;the two-layer picture of <a class="xref" href="03-geometry.html#sec:constructions">&sect;3.4</a>, where
+the Merkle&ndash;Damg&aring;rd mode (<a class="xref" href="03-geometry.html#thm:md">Theorem 3.1</a>) and the Davies&ndash;Meyer
+compression (<a class="xref" href="03-geometry.html#thm:dm">Theorem 3.3</a>) each carry a theorem&mdash;and all residual
+mystery is compressed into the finite map \(f\).</p>
+
+<p>There is a sharper way to say that the model is a heuristic, and it is a
+theorem rather than a caveat. Canetti, Goldreich, and Halevi
+constructed signature and encryption schemes that are <em>provably
+secure</em> in the random-oracle model and <em>provably insecure</em> the
+moment the oracle is replaced by <em>any</em> concrete, publicly specified
+function whatsoever, <span class="sha">SHA-256</span> or otherwise&nbsp;<a class="cite" href="bibliography.html#CGH2004">(Canetti et al., 2004)</a>. The
+construction is diagonal&mdash;the scheme tests whether the code it is given
+is a short program and betrays its secret if so, which a true random
+oracle never is but every real hash is&mdash;so it is contrived, and no
+natural protocol is known to suffer. But it settles the logic: a
+random-oracle proof is not a proof about <span class="sha">SHA-256</span> with an admitted gap; it
+is a proof about an idealized object that <em>no</em> function can fully
+become. The heuristic is not merely unproven, it is in general false,
+and its continued empirical success (<a class="xref" href="#sec:below">&sect;6.4</a>) is therefore
+itself part of the natural history&mdash;a regularity of the world, not a
+lemma.</p>
+
+<h2 id="sec:mdstructure">6.3&ensp;The construction is not the oracle: provable structure above \(f\) <a class="pdf-ref" href="kng256.pdf#page=33">PDF p. 33</a></h2>
+
+<p>Here is a genuine surprise, and it cuts against the drumbeat of this
+paper. We keep asserting that <span class="sha">SHA-256</span> exhibits <em>no</em> observable
+deviation from a random function. That is true of the compression
+function \(f\); it is <em>false</em> of the Merkle&ndash;Damg&aring;rd wrapper
+around it. The iteration mode has provable, nameable, exploitable
+structure&mdash;deviations from random-oracle behavior that hold
+<em>even if \(f\) is a perfect random oracle</em>&mdash;and they are among the
+most elegant results in the subject. They locate the paper&rsquo;s mystery
+more precisely than we have so far: the residue of the unknown lives in
+\(f\), because the part outside \(f\) is not unknown at all. Its
+non-randomness is a set of theorems.</p>
+
+<p>The keystone is Joux&rsquo;s multicollision attack&nbsp;<a class="cite" href="bibliography.html#Joux2004">(Joux, 2004)</a>
+(<a class="xref" href="#fig:multicoll">Figure 10</a>). For a true \(256\)-bit random function, finding
+\(2^k\) messages that all share one digest should cost about
+\(2^{256(2^k-1)/2^k}\) work&mdash;for eight-way agreement, near \(2^{224}\),
+astronomically beyond a single collision&rsquo;s \(2^{128}\). In an iterated
+hash it costs only \(k\) times a single collision. The trick is pure
+construction-level reasoning: birthday-find a colliding <em>block
+pair</em> at the first chaining value, then <em>from the merged state</em>
+find another colliding block pair, and so on for \(k\) stages; freely
+mixing the two choices at each stage yields \(2^k\) full messages all
+landing on the same final digest, at total cost \(k \cdot 2^{128}\)
+instead of \(2^{128 \cdot (2^k-1)/2^k}\). Cascading is the immediate
+casualty: hashing with \(H_1 \Vert H_2\), the &ldquo;belt and braces&rdquo; habit
+of concatenating two hashes for safety, is no stronger than the better
+single one&mdash;build a \(2^{n_1/2}\)-multicollision in \(H_1\), then by
+pigeonhole two of its exponentially many members collide in \(H_2\) as
+well. A folklore engineering practice was refuted by one structural
+idea, no cryptanalysis of any \(f\) required.</p>
+
+<figure class="viz-figure" id="fig:multicoll">
+  <div class="viz" id="viz-multicoll"></div>
+  <figcaption><strong>Figure 10.</strong> Joux multicollisions&nbsp;<a class="cite" href="bibliography.html#Joux2004">(Joux, 2004)</a>. Because the state is
+  a narrow <em>delay line</em> passed from block to block
+  (<a class="xref" href="03-geometry.html#sec:roundshape">&sect;3.3</a>), a chain of \(k\) independent single collisions
+  multiplies into \(2^k\) colliding messages at only \(k\) times the cost
+  of one&mdash;a provable, non-statistical deviation from random-oracle
+  behavior that lives entirely in the iteration, not in \(f\). The
+  narrow internal state is the culprit; a wide-pipe or sponge design
+  (the SHA-3 sponge of <a class="xref" href="03-geometry.html#sec:merkledamgard">&sect;3.1</a>) closes exactly this
+  door.
+    <a class="pdf-ref" href="kng256.pdf#page=33">static version: PDF p. 33</a></figcaption>
+</figure>
+
+<p>Two further theorems mine the same seam, and both convert the
+<em>narrowness of the internal state</em>&mdash;the eight-word delay line of
+<a class="xref" href="03-geometry.html#sec:roundshape">&sect;3.3</a>, no wider than the output&mdash;into an attack.
+Kelsey and Schneier showed that a <em>second preimage</em> for a long
+message is far cheaper than the ideal \(2^{256}\): given a target message
+of \(2^\ell\) blocks, &ldquo;expandable messages&rdquo; (a multicollision between
+message lengths) let one splice in a forged prefix that rejoins the
+victim&rsquo;s chain at some interior state, at cost about
+\(2^{256-\ell}\)&nbsp;<a class="cite" href="bibliography.html#KelseySchneier2005">(Kelsey and Schneier, 2005)</a>. Long messages are
+<em>provably</em> weaker than short ones&mdash;a sentence with no meaning at
+all for a random oracle, where every input is independent.
+Kelsey and Kohno pushed the genre from collision to <em>commitment
+fraud</em>: their &ldquo;herding&rdquo; attack precomputes a branching &ldquo;diamond&rdquo;
+structure of chaining values, publishes a single digest as a
+soothsayer&rsquo;s sealed prophecy, and then, given any later-revealed
+prefix, herds it into the committed digest by appending a short
+suffix&nbsp;<a class="cite" href="bibliography.html#KelseyKohno2006">(Kelsey and Kohno, 2006)</a>. The hash&rsquo;s advertised binding
+property&mdash;the entire basis of the commitment use of
+<a class="xref" href="02-history.html#sec:uses">&sect;2.1</a>&mdash;is quantitatively weakened by construction-level
+structure alone.</p>
+
+<p>The moral reframes the whole paper, so we state it flatly. Every one of
+these attacks treats \(f\) as an ideal random oracle and still breaks the
+advertised behavior of <span class="sha">SHA-256</span>-the-construction; each is a
+<em>theorem</em>, not a measurement, and each traces to one visible
+design fact&mdash;the internal state is no wider than the digest, so the
+chaining value is a bottleneck that a random function would not have
+(<a class="xref" href="03-geometry.html#sec:roundshape">&sect;3.3</a>). This is why the SHA-3 competition selected a
+sponge with a <em>wide</em> internal
+state&nbsp;<a class="cite" href="bibliography.html#BDPV2007">(Bertoni et al., 2007)</a> that structurally forecloses all three attacks,
+and why the
+honest slogan is not &ldquo;<span class="sha">SHA-256</span> behaves like a random oracle&rdquo; but the
+sharper <em>&ldquo;\(f\) behaves like a random function, and the wrapper&rsquo;s
+deviations from a random oracle are completely known.&rdquo;</em> The mystery of
+this paper is now pinned exactly where it belongs: not in the
+architecture, which is theorems all the way down, but in the single
+finite map \(f\), about which there are none.</p>
+
+<h2 id="sec:below">6.4&ensp;Empirical and adversarial measurement: attacking from below <a class="pdf-ref" href="kng256.pdf#page=34">PDF p. 34</a></h2>
+
+<p>From below, two very different measurement cultures apply.</p>
+
+<p><em>Statistical testing</em> treats the function as a black-box PRNG and
+runs batteries of hypothesis tests: NIST&rsquo;s SP&thinsp;800-22
+suite&nbsp;<a class="cite" href="bibliography.html#NIST2010">(Rukhin et al., 2010)</a> and the far more demanding TestU01
+&ldquo;BigCrush&rdquo;&nbsp;<a class="cite" href="bibliography.html#LEcuyerSimard2007">(L&rsquo;Ecuyer and Simard, 2007)</a>. <span class="sha">SHA-256</span>-based generators pass
+everything, which is informative but bounded: these batteries famously
+demolish the classical linear generators (a Mersenne Twister fails
+BigCrush&rsquo;s linear-complexity tests; lattice structure betrays linear
+congruential generators&mdash;the pathologies catalogued since
+Knuth&nbsp;<a class="cite" href="bibliography.html#Knuth1997">(Knuth, 1997)</a>), so passing places <span class="sha">SHA-256</span> strictly above the
+traditional PRNG canon; but a battery is a fixed, finite set of null
+hypotheses, and structure invisible to all of them may be gross. Knuth&rsquo;s
+own moral stands: statistical testing can refute, never confirm. For
+<span class="sha">SHA-256</span> the concrete record is easily stated: the counter sequence
+\(\SHA(1), \SHA(2), \SHA(3), \dots\) is not merely testable but
+<em>standardized</em>&mdash;NIST&rsquo;s Hash_DRBG is essentially this
+generator&nbsp;<a class="cite" href="bibliography.html#SP80090A">(Barker and Kelsey, 2015)</a>&mdash;and the same construction over SHA-1
+passed every one of BigCrush&rsquo;s tests in the paper that introduced the
+battery. Passes of this kind are so thoroughly expected that the
+literature scarcely bothers to record them. To see what that
+expectation is calibrated against&mdash;and what a <em>finished</em> theory
+of pseudorandomness looks like&mdash;we pause (<a class="xref" href="#sec:prngs">&sect;6.6</a>).</p>
+
+<p>The record deserves tabulating battery by battery, because the honest
+picture distinguishes three things the phrase &ldquo;passes every test&rdquo;
+usually blurs: what has actually been <em>run</em> and published, what is
+merely <em>expected</em> and therefore never written down, and what is
+<em>provably out of reach</em> of any feasible test at all
+(<a class="xref" href="#tab:batteries">Table 2</a>).</p>
+
+<figure class="table-figure" id="tab:batteries">
+<table class="paper-table">
+<thead>
+<tr>
+  <th>Battery (size)</th>
+  <th>What it would catch</th>
+  <th>Status on the SHA family</th>
+  <th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>NIST SP&thinsp;800-22<br>(15 tests)</td>
+  <td>monobit &amp; block frequency, runs, matrix rank, spectral, template
+  matching, Maurer universal, linear complexity, serial, approximate
+  entropy, cusums, excursions</td>
+  <td>The standard instrument for cryptographic RNGs. The <span class="sha">SHA-256</span> counter
+  generator is standardized as <code>Hash_DRBG</code> and passes; a
+  failure would be reportable and none is reported. Passing is
+  <em>expected</em>, so rarely published as such.</td>
+  <td>Rukhin et al. <a class="cite" href="bibliography.html#NIST2010">(2010)</a>; Barker and Kelsey <a class="cite" href="bibliography.html#SP80090A">(2015)</a></td>
+</tr>
+<tr>
+  <td>TestU01 Crush / BigCrush<br>(\({\sim}96\)/\(106\) tests, \(160\) stats)</td>
+  <td>birthday spacings, collisions, gaps, poker, rank, linear complexity,
+  Hamming-weight, random-walk statistics</td>
+  <td><strong>Documented run.</strong> SHA-1 (OFB and CTR modes) passes
+  <em>all</em>; AES likewise, bar one \(p\)-value that cleared on
+  replication. <span class="sha">SHA-256</span> itself was not in that study, but is expected to
+  behave identically.</td>
+  <td>L&rsquo;Ecuyer and Simard <a class="cite" href="bibliography.html#LEcuyerSimard2007">(2007)</a></td>
+</tr>
+<tr>
+  <td>DIEHARD / Dieharder<br>(\({\sim}30\) tests)</td>
+  <td>birthday spacings, overlapping permutations, binary rank, &ldquo;monkey&rdquo;
+  (bitstream) tests</td>
+  <td>Routinely applied to cryptographic generators and passed; we know of
+  no <span class="sha">SHA-256</span>-specific published study&mdash;passing is folklore, exactly as
+  the text describes.</td>
+  <td>Marsaglia<br>(software)</td>
+</tr>
+<tr>
+  <td>PractRand<br>(streams to \({\gtrsim}\)&thinsp;TB)</td>
+  <td>bit-pattern and transition anomalies visible only at very large
+  sample volume</td>
+  <td>Applied to <span class="sha">SHA-256</span>-based counter generators and passed to the volumes
+  tested. A software tool, with no formal paper to cite.</td>
+  <td>&mdash; (software)</td>
+</tr>
+<tr>
+  <td><em>Global \(256\)-bit uniformity / closeness</em></td>
+  <td><em>any</em> constant-\(\varepsilon\) deviation of the <em>full</em> output
+  distribution from uniform</td>
+  <td><strong>Not feasible.</strong> Requires \({\sim}2^{128}\) samples&mdash;the
+  birthday wall as an information-theoretic lower bound; provably
+  undecidable at any affordable cost (<a class="xref" href="#sec:disttest">&sect;6.5</a>).</td>
+  <td>Canonne <a class="cite" href="bibliography.html#Canonne2020">(2020)</a></td>
+</tr>
+</tbody>
+</table>
+<figcaption><strong>Table 2.</strong> Standard statistical batteries and their verdict on the
+<span class="sha">SHA-256</span> family. Only the TestU01 row is a <em>documented, published</em>
+run&mdash;and it tested SHA-1, not <span class="sha">SHA-256</span>. The SP&thinsp;800-22 row rests on
+standardization and the absence of reported failure; the DIEHARD and
+PractRand rows on routine practice that the literature, expecting
+success, does not record; and the last row is not a gap in effort but
+a theorem (<a class="xref" href="#sec:disttest">&sect;6.5</a>) that no feasible sample can close.
+Every battery that <em>has</em> been run reports uniform; the one that
+would see the whole distribution cannot be run.
+<a class="pdf-ref" href="kng256.pdf#page=35">PDF p. 35</a></figcaption>
+</figure>
+
+<p>It is worth being concrete about <em>which</em> regularities are absent
+and which are present, since &ldquo;passes the batteries&rdquo; is too coarse to
+convey the texture of the thing. A ledger.</p>
+
+<p><em>Regularities <span class="sha">SHA-256</span> does <strong>not</strong> exhibit</em> (all empirical, none
+proven absent):</p>
+<ul>
+  <li><strong>No lattice structure.</strong> Successive output tuples show no
+  Marsaglia effect: where the \(d\)-tuples of a linear congruential
+  generator lie on at most \((d!\,m)^{1/d}\) hyperplanes
+  (<a class="xref" href="#sec:prngs">&sect;6.6</a>;&nbsp;<a class="cite" href="bibliography.html#Marsaglia1968">Marsaglia, 1968</a>), the points
+  \((\SHA(n), \SHA(n{+}1), \dots)\) display no detectable hyperplane
+  concentration, no lattice, no low-dimensional alignment, in any
+  projection anyone has computed.</li>
+  <li><strong>No observable period.</strong> The counter stream \(\SHA(1),
+  \SHA(2), \dots\) has no detected cycle; viewed as iteration
+  (<a class="xref" href="04-random-maps.html#sec:randommaps">&sect;4</a>) the expected recurrence time is \(\sim 2^{128}\),
+  operationally unreachable. Contrast the classical generators, whose
+  periods are exact theorems (\(2^{19937}-1\) for the Mersenne
+  Twister;&nbsp;<a class="cite" href="bibliography.html#MatsumotoNishimura1998">Matsumoto and Nishimura, 1998</a>).</li>
+  <li><strong>No linear or low-degree structure.</strong> The \(\Ftwo\)-linear
+  complexity of the output stream is empirically near-maximal&mdash;no low
+  linear complexity, the exact defect that sinks the Twister on
+  BigCrush&mdash;and no correlation of any output bit with a
+  low-degree Boolean function of the input has been found. Each output
+  bit, as a function of the input, appears to have a flat
+  Walsh&ndash;Hadamard spectrum: no good linear approximation, the property
+  linear cryptanalysis would exploit.</li>
+  <li><strong>No first-order statistical bias.</strong> Output bit frequencies,
+  runs, gaps, block frequencies, and autocorrelations at every measured
+  lag sit within sampling noise of the uniform expectation&mdash;the content
+  of &ldquo;passes SP&thinsp;800-22 and BigCrush.&rdquo;</li>
+</ul>
+
+<p><em>Regularities <span class="sha">SHA-256</span> <strong>does</strong> exhibit</em> (these are the true
+structure, and they are exactly the harmless kind):</p>
+<ul>
+  <li><strong>Determinism.</strong> It is a fixed function: \(\SHA(x)\) is always
+  the same, the one perfectly reliable &ldquo;pattern,&rdquo; and the sole basis of
+  every use in <a class="xref" href="02-history.html#sec:uses">&sect;2.1</a>.</li>
+  <li><strong>The avalanche property.</strong> Flipping a single input bit
+  flips each of the \(256\) output bits with probability indistinguishable
+  from \(\tfrac12\), and near-independently, so the number of changed
+  output bits is essentially \(\mathrm{Binomial}(256, \tfrac12)\), sharply
+  peaked at \(128\). This <em>strict avalanche criterion</em>, a deliberate
+  design target since&nbsp;Webster and Tavares <a class="cite" href="bibliography.html#WebsterTavares1985">(1986)</a>, is a regularity in the
+  sense that it holds tightly and measurably&mdash;a property of
+  <em>structurelessness itself</em>, and the subject of a project below.</li>
+  <li><strong>Completeness/diffusion.</strong> After the full round count every
+  output bit depends on every input bit; there is no input coordinate any
+  output ignores.</li>
+</ul>
+
+<p>The avalanche property is the one to dwell on, because it dictates the
+self-correlation structure&mdash;or rather its total absence. Consecutive
+counter values \(n\) and \(n+1\) differ, as bit strings, in just a few
+low-order bits; avalanche then forces \(\SHA(n)\) and \(\SHA(n+1)\) to differ
+in about half of <em>their</em> bits, with no residual correlation between
+them. So the output stream has essentially zero autocorrelation at every
+lag and no continuity in any metric on the inputs: nearness of arguments
+carries no information about nearness of values. This is precisely the
+opposite of the individual ARX primitives, each of which is \(2\)-adically
+\(1\)-Lipschitz&mdash;continuous, correlation-preserving
+(<a class="xref" href="03-geometry.html#sec:statespace">&sect;3.2</a>)&mdash;and it is the composition of \(64\) rounds that
+annihilates that continuity. The designed regularity (avalanche) is the
+mechanism that manufactures the absence of every other regularity a
+statistical test could name.</p>
+
+<p><em>Cryptanalysis</em> is the adversarial culture: bespoke,
+design-specific, and quantitative in a different way&mdash;its currency is
+the number of rounds that can be broken and at what cost.
+<a class="xref" href="07-differential.html#sec:differential">&sect;7</a> anatomizes the method behind these numbers; the
+headline state of the art on <span class="sha">SHA-256</span>: practical collisions for the
+compression function reduced to 28 of its 64 rounds and theoretical
+ones at 31&nbsp;<a class="cite" href="bibliography.html#MendelNadSchlaffer2013">(Mendel et al., 2013)</a>, &ldquo;semi-free-start&rdquo;
+collisions (the attacker also chooses the chaining value) at
+39&nbsp;<a class="cite" href="bibliography.html#LiLiuWang2024">(Li et al., 2024)</a>, and preimage attacks via bicliques reaching
+about 45 rounds at cost barely below brute force&nbsp;<a class="cite" href="bibliography.html#KRS2012">(Khovratovich et al., 2012)</a>. Two readings of these numbers
+coexist. Comforting: after twenty years of world-class effort, half the
+rounds stand untouched, and nothing approaches the full function.
+Discomfiting: the same community&rsquo;s tools went, for SHA-1, from academic
+paper to industrial collision in one decade (<a class="xref" href="02-history.html#sec:falling">&sect;2.3</a>), and
+there is no theory predicting which trajectory <span class="sha">SHA-256</span> is on. The round
+margin is a measurement of <em>our</em> progress, not of <em>its</em>
+strength.</p>
+
+<h2 id="sec:disttest">6.5&ensp;How much can statistics even see? The sublinear ceiling <a class="pdf-ref" href="kng256.pdf#page=37">PDF p. 37</a></h2>
+
+<p>Knuth&rsquo;s moral&mdash;testing refutes, never confirms&mdash;has a quantitative
+refinement worth stating, because it says precisely <em>which</em>
+questions about <span class="sha">SHA-256</span>&rsquo;s output distribution are answerable with a
+feasible number of samples and which are not. The relevant theory is
+<em>distribution testing</em>, the sublinear-algorithms study of how many
+independent samples from an unknown distribution over a domain of size
+\(N\) are needed to decide a property of it; the modern survey is
+Canonne <a class="cite" href="bibliography.html#Canonne2020">(2020)</a>.</p>
+
+<p>The foundational result is the sample complexity of <em>uniformity
+testing</em>: to distinguish &ldquo;the distribution is uniform on \(N\) points&rdquo;
+from &ldquo;it is \(\varepsilon\)-far from uniform in total-variation
+distance,&rdquo; one needs, and suffices with, \(\Theta(\sqrt{N}/\varepsilon^{2})\)
+samples. The upper bound is achieved by a startlingly simple statistic&mdash;<em>count collisions</em>: draw \(m\) samples, count coinciding pairs, and
+compare against the \(\binom{m}{2}/N\) expected under uniformity, a test
+going back to Goldreich and Ron and made sample-optimal by Paninski
+(both in&nbsp;<a class="cite" href="bibliography.html#Canonne2020">Canonne, 2020</a>). The reader will recognize the birthday
+calculus of <a class="xref" href="04-random-maps.html#sec:randommaps">&sect;4</a>: collisions among \(\sqrt{N}\) samples
+are exactly the signal, and \(\sqrt{N}\) is exactly the threshold.</p>
+
+<p>Point this at <span class="sha">SHA-256</span>&rsquo;s \(256\)-bit output distribution (\(N = 2^{256}\)) and
+the ceiling is stark: detecting <em>any</em> constant-\(\varepsilon\)
+deviation of the global output distribution from uniform requires on the
+order of \(2^{128}\) samples&mdash;the birthday wall again, now wearing the
+hat of an <em>information-theoretic lower bound</em> on testing rather than
+an algorithmic cost. No battery, however clever, that draws fewer than
+\(\sim 2^{128}\) outputs can certify or refute uniformity of the full
+distribution; the question is not hard, it is <em>unanswerable</em> at
+feasible sample sizes. So whatever SP&thinsp;800-22 and BigCrush are doing when
+they &ldquo;pass <span class="sha">SHA-256</span>,&rdquo; they are emphatically <em>not</em> testing the
+\(256\)-bit distribution.</p>
+
+<p>What they <em>are</em> testing is the reconciling point, and it is exactly
+the sublinear-feasible part. Every test in those batteries is a
+low-dimensional or low-complexity statistic&mdash;the frequency of single
+bits, of short blocks, of runs; linear complexity; a fixed template
+count&mdash;each of which lives on a domain small enough (\(2^{k}\) for modest
+\(k\), or a real-valued summary) that \(\sqrt{\,\cdot\,}\) samples suffice
+and a laptop has them. Passing means: on every <em>marginal</em> anyone has
+thought to compute and can afford to test, <span class="sha">SHA-256</span> matches uniform. The
+\(2^{128}\) ceiling says the joint, high-dimensional distribution is
+untestable; the batteries probe its cheap shadows, and the shadows are
+clean. That precise divorce&mdash;feasible low-dimensional marginals all
+uniform, infeasible global distribution forever unknown&mdash;is the honest
+content of &ldquo;passes every test,&rdquo; and it is a sharper statement than the
+phrase usually carries.</p>
+
+<p>Two further refinements are worth flagging because each squeezes signal
+from limited samples rather than brute count. First, <em>closeness</em>
+(two-sample) testing: deciding whether <span class="sha">SHA-256</span>&rsquo;s output distribution
+<em>equals</em> a reference distribution, rather than testing it against
+the explicit uniform, has its own sublinear theory&nbsp;<a class="cite" href="bibliography.html#Batu2013">(Batu et al., 2013)</a>, and
+it is the right frame for the comparative program of <a class="xref" href="04-random-maps.html#sec:randommaps">&sect;4</a>&mdash;one does not test <span class="sha">SHA-256</span> against &ldquo;uniform&rdquo; in the abstract but against
+a measured random-map <em>control</em>, in the low-dimensional Flajolet
+coordinates where \(\sqrt{\,\cdot\,}\) samples reach. Second, the
+<em>\(p\)-value-of-\(p\)-values</em> trick that SP&thinsp;800-22 actually
+uses&nbsp;<a class="cite" href="bibliography.html#NIST2010">(Rukhin et al., 2010)</a>: run one weak test on many independent streams,
+then test whether the resulting \(p\)-values are themselves uniform on
+\([0,1]\). A bias too faint for any single run to flag becomes visible in
+the second-order distribution of the \(p\)-values&mdash;a genuine way to
+amplify a subtle distributional signal without paying for
+prohibitively many samples per test. Against <span class="sha">SHA-256</span> these meta-tests, too,
+report uniform. None of this proves anything; but it locates, to the
+sample, the boundary between what the empirical program can decide and
+what it provably cannot.</p>
+
+<div class="project" id="project-7">
+  <div class="project-title">Project 7: Collision testing at the birthday threshold</div>
+  <p>Implement the collision-count uniformity tester on the \(n\)-bit output
+  of truncated <span class="sha">SHA-256</span> for \(n\) up to \({\sim}48\), and measure its
+  <em>sample complexity</em> empirically: how many outputs are needed to
+  reject uniformity for reduced-round or deliberately-biased variants,
+  and how does the number scale with \(n\)? Confirm the
+  \(\Theta(\sqrt{2^{n}})\) law&nbsp;<a class="cite" href="bibliography.html#Canonne2020">(Canonne, 2020)</a> and watch it become the
+  same \(2^{n/2}\) wall the collision-hunting project of
+  <a class="xref" href="04-random-maps.html#sec:telescope">&sect;4.3</a> runs into&mdash;one barrier, met from the
+  testing side and the attacking side at once. Then add the
+  \(p\)-value-of-\(p\)-values layer and see how much fainter a bias it can
+  catch at fixed budget.</p>
+  <div class="project-meta"><em>Prerequisites:</em> probability; programming &ensp; <em>Window:</em> 4&ndash;6 weeks</div>
+</div>
+
+<h2 id="sec:prngs">6.6&ensp;Interlude: what a finished theory looks like <a class="pdf-ref" href="kng256.pdf#page=38">PDF p. 38</a></h2>
+
+<p>Two mature bodies of mathematics sit directly adjacent to our object,
+and both show what &ldquo;understanding a pseudorandom process&rdquo; means when
+understanding is actually achieved.</p>
+
+<h3 class="runin">Pseudorandom numbers and finite fields.</h3>
+<p>Pseudorandom number generators were born with the stored-program
+computer: Monte Carlo simulation demanded rivers of reproducible random
+digits, physical sources were slow and unrepeatable, and by mid-century
+von Neumann&rsquo;s middle-square method and Lehmer&rsquo;s linear congruential
+generator \(x_{n+1} = a x_n + c \bmod m\) had founded the subject (von
+Neumann also supplied its founding joke, about the &ldquo;state of sin&rdquo; of
+anyone producing random digits by arithmetic). The subject&rsquo;s demands
+are precise and <em>non-adversarial</em>: a simulation needs
+equidistribution of the statistics it consumes, a long period, and
+above all speed&mdash;a physics run may consume \(10^{12}\) variates, so a
+generator must cost a few word operations per output. The discipline
+was codified by Knuth <a class="cite" href="bibliography.html#Knuth1997">(1997, Ch. 3)</a>, and its mature mathematical
+home is the arithmetic of finite fields, as systematized by Lidl and
+Niederreiter&nbsp;<a class="cite" href="bibliography.html#LidlNiederreiter1997">(Lidl and Niederreiter, 1997</a>; <a class="cite" href="bibliography.html#Niederreiter1992">Niederreiter, 1992)</a>. And here
+the theorems are <em>theorems</em>. A congruential generator attains full
+period exactly when three elementary congruence conditions on
+\((a, c, m)\) hold (the Hull&ndash;Dobell criterion; <a class="cite" href="bibliography.html#Knuth1997">Knuth, 1997, &sect;&nbsp;3.2.1</a>).
+A linear recurrence over \(\Ftwo\) with characteristic polynomial \(f\) has
+period equal to the order of \(f\), maximal \(2^k - 1\) precisely when \(f\)
+is primitive&nbsp;<a class="cite" href="bibliography.html#LidlNiederreiter1997">(Lidl and Niederreiter, 1997, Ch. 8)</a>&mdash;which is how
+Matsumoto and Nishimura could <em>prove</em> that their Mersenne Twister
+has period \(2^{19937}-1\) and equidistribution in \(623\)
+dimensions&nbsp;<a class="cite" href="bibliography.html#MatsumotoNishimura1998">(Matsumoto and Nishimura, 1998)</a>. Marsaglia <em>proved</em> that
+successive \(d\)-tuples from any congruential generator fall on at most
+\((d!\,m)^{1/d}\) hyperplanes&nbsp;<a class="cite" href="bibliography.html#Marsaglia1968">(Marsaglia, 1968)</a>&mdash;for \(d = 10\) and
+\(m = 2^{32}\), a few dozen planes carrying every point the generator
+will ever produce. For nonlinear congruential generators,
+equidistribution is controlled through exponential-sum estimates, so
+that Weil&rsquo;s Riemann hypothesis for curves over finite fields quietly
+underwrites the uniformity of practical
+generators&nbsp;<a class="cite" href="bibliography.html#Niederreiter1992">(Niederreiter, 1992)</a>. Classical pseudorandomness, in
+short, is a satellite of the arithmetic of finite fields.</p>
+
+<p>Now the double-edged contrast. These theorems exist <em>because</em> the
+generators are algebraically transparent&mdash;one clean structure, fully
+exposed&mdash;and the same transparency is what makes them cryptographically
+worthless: Marsaglia&rsquo;s planes and the Twister&rsquo;s \(\Ftwo\)-linearity are
+simultaneously the content of the theorems and the substance of the
+distinguishers (<a class="xref" href="#sec:below">&sect;6.4</a>). Efficiency tells the story from the
+cost side. A Twister step is a handful of word operations; <span class="sha">SHA-256</span>
+spends on the order of a few thousand word operations per \(256\)-bit
+output&mdash;one to two orders of magnitude more work per bit in
+software&mdash;and the entire surcharge purchases exactly one property,
+resistance to an intelligent adversary, which no simulation needs.
+Where the classical theory lives inside a single algebraic structure,
+<span class="sha">SHA-256</span> deliberately straddles two incompatible ones
+(<a class="xref" href="03-geometry.html#sec:statespace">&sect;3.2</a>) precisely so that no analogue of the
+Lidl&ndash;Niederreiter machinery can grip it. That is the trade: the
+theorems stop where the adversary begins.</p>
+
+<h3 class="runin">Random permutations and the symmetric group.</h3>
+<p>The second finished theory concerns a different pseudorandom object: a
+<em>shuffle</em> is a pseudorandom number generator valued in the
+symmetric group, and &ldquo;how many riffle shuffles randomize a deck?&rdquo; is
+the question &ldquo;how many rounds suffice?&rdquo; asked of cards. Here the
+theory reached a summit. Modeling repeated riffle shuffles as a random
+walk on \(S_{52}\), Bayer and Diaconis <a class="cite" href="bibliography.html#BayerDiaconis1992">(1992)</a> computed the total-variation
+distance to uniformity essentially exactly, exhibiting the famous
+answer (seven shuffles) and, more importantly, the <em>cutoff
+phenomenon</em>. Their theorem is worth quoting in the exact form that makes
+the abruptness visible. Riffle-shuffling a deck of \(n\) cards
+\(k = \tfrac{3}{2}\log_2 n + \theta\) times, the total-variation distance
+to the uniform distribution obeys</p>
+\[
+  \bigl\| Q^{\ast k} - U \bigr\|_{\mathrm{TV}}
+  \;=\; 1 - 2\,\Phi\!\Bigl(\tfrac{-2^{-\theta}}{4\sqrt{3}}\Bigr) + o(1),
+  \qquad n \to \infty,
+\]
+<p>where \(\Phi\) is the standard normal cumulative distribution function</p>
+\[
+  \Phi(z) \;=\; \frac{1}{\sqrt{2\pi}} \int_{-\infty}^{z}
+                 e^{-t^{2}/2}\, \mathrm{d}t
+\]
+<p><a class="cite" href="bibliography.html#BayerDiaconis1992">(Bayer and Diaconis, 1992, Thm. 1)</a>, so that the approach to uniformity is
+governed by the Gaussian tail \(\int e^{-t^2/2}\,\mathrm{d}t\) evaluated at
+the exponentially small argument \(-2^{-\theta}/(4\sqrt 3)\). The scaling parameter
+\(\theta\) measures shuffles past the threshold \(\tfrac{3}{2}\log_2 n\);
+because the right-hand side collapses from \(1\) to \(0\) as \(\theta\) runs
+through an \(O(1)\) window while the threshold itself grows like
+\(\log_2 n\), the transition is a true cutoff. For \(n = 52\) this puts the
+knee at \(k \approx 8.55\) and yields distances dropping from \(1.000\) at
+\(k=5\) to \(0.334\) at \(k=7\) and \(0.167\) at \(k=8\): the origin of &ldquo;seven
+shuffles.&rdquo; The technical engine behind such exact statements is the
+representation theory of finite groups: for the walk generated by random
+transpositions, Diaconis and Shahshahani <a class="cite" href="bibliography.html#DiaconisShahshahani1981">(1981)</a> proved cutoff at
+\(\tfrac12 n \log n\) by Fourier analysis on \(S_n\), with the sharp
+exponential rate
+\(\| Q^{\ast k} - U \|_{\mathrm{TV}} \le \tfrac12\, e^{-2c}\) once
+\(k = \tfrac12 n(\log n + c)\)&mdash;the irreducible representations, indexed
+by Young diagrams, diagonalize the walk, and a single upper-bound lemma
+converts character sums into sharp convergence inequalities. The method is expounded in Diaconis&rsquo;s
+monograph&nbsp;<a class="cite" href="bibliography.html#Diaconis1988">(Diaconis, 1988)</a>, and it is the standing model of what a
+<em>hard convergence theorem</em> for an iterated mixing process looks
+like: not &ldquo;eventually close to uniform,&rdquo; but <em>exactly when</em>,
+with matching bounds.</p>
+
+<h3 class="runin">Random walks on the hypercube, and the cutoff phenomenon.</h3>
+<p>Between the card-shuffling summit and our object sits the solved mixing
+problem closest to <span class="sha">SHA-256</span>&rsquo;s own geometry: the random walk on the
+hypercube \(\Ftwo^n\)&mdash;the very space of <a class="xref" href="03-geometry.html#sec:statespace">&sect;3.2</a>, walked
+one coordinate at a time. At each step, pick one of the \(n\) bit
+positions uniformly and replace that bit by a fresh coin flip (this is
+the Ehrenfest urn of statistical mechanics, wearing bits). How many
+steps until the position is uniform on all \(2^n\) points? The answer is
+a second exact cutoff theorem: the total-variation distance stays
+pinned near \(1\) until \(\tfrac14\, n \ln n\) steps, then collapses to \(0\)
+inside a window of width \(O(n)\)&mdash;asymptotically instantaneous
+(<a class="xref" href="#fig:cutoff">Figure 11</a>; the phenomenon, its history, and this example are
+surveyed in&nbsp;<a class="cite" href="bibliography.html#Diaconis1996">Diaconis, 1996</a>). The threshold is pure coupon
+collecting: a coordinate never yet touched is a coordinate whose bit is
+still the initial one, and \(\tfrac14 n \ln n\) is when the last
+stragglers have been visited; the logarithm is the price of the
+<em>slowest</em> coordinate, not the average one&mdash;a moral worth
+remembering whenever &ldquo;rounds needed to mix&rdquo; is discussed.</p>
+
+<p>Better still, the machinery is transparent enough to expose a
+coincidence this paper finds genuinely striking. On the abelian group
+\(\Ftwo^n\) the Fourier analysis that diagonalized card shuffles becomes
+elementary: the characters are the Walsh functions
+\(x \mapsto (-1)^{\langle u, x\rangle}\), every translation-invariant
+walk has them as eigenvectors, and <em>the eigenvalues are exactly
+the Walsh&ndash;Hadamard coefficients of the one-step distribution</em>. Mixing
+is slow precisely in the directions \(u\) where that coefficient is
+large. Now reread the empirical ledger of <a class="xref" href="#sec:below">&sect;6.4</a>: &ldquo;flat
+Walsh&ndash;Hadamard spectrum, no good linear approximation&rdquo; is the
+property <em>linear cryptanalysis</em> probes. The quantity the
+cryptanalyst hunts and the quantity that governs mixing are the same
+number: a linear distinguisher is a slow eigenvector, caught in the
+act. Mixing analysis and linear cryptanalysis are, in this abelian
+setting, one computation performed by two communities that rarely cite
+each other&mdash;and the projects of <a class="xref" href="#sec:gap">&sect;6.7</a> amount to measuring
+<span class="sha">SHA-256</span>&rsquo;s spectral gap experimentally, round by round. For scale: at
+\(n = 256\) the theorem&rsquo;s threshold is \(\tfrac14\, n \ln n \approx 355\)
+single-coordinate updates, while one <span class="sha">SHA-256</span> round nominally touches all
+\(256\) state bits at once&mdash;but in correlated fashion, which is exactly
+why no theorem applies and the measured curve is the interesting
+object.</p>
+
+<figure class="viz-figure" id="fig:cutoff">
+  <div class="viz" id="viz-cutoff"></div>
+  <figcaption><strong>Figure 11.</strong> The cutoff phenomenon, schematically: distance to
+  uniformity for the hypercube walk stays near \(1\), then collapses
+  within a window that is asymptotically negligible compared to the
+  \(\tfrac14 n \ln n\) threshold. &ldquo;How many rounds
+  are enough?&rdquo; has, for this toy relative of <span class="sha">SHA-256</span>, an answer sharp
+  to within lower-order terms&mdash;and the toy-compression-walk project
+  of this section asks whether <span class="sha">SHA-256</span>-family walks show the same
+  knee.
+    <a class="pdf-ref" href="kng256.pdf#page=40">static version: PDF p. 40</a></figcaption>
+</figure>
+
+<p>The bridge to our object is not an analogy but a change of alphabet.
+Every keyed block cipher is a family of permutations, and <span class="sha">SHA-256</span>&rsquo;s own
+compression function is one in disguise (its core is a block cipher,
+run in Davies&ndash;Meyer mode, <a class="xref" href="03-geometry.html#sec:roundshape">&sect;3.3</a>). More directly: the
+chaining recursion \(h_i = f(h_{i-1}, m_i)\) of <a class="xref" href="03-geometry.html#sec:merkledamgard">&sect;3.1</a>,
+fed <em>random</em> message blocks, is literally a random walk on the
+state space \(\State\), driven by \(2^{512}\) generators. Diaconis&rsquo;s
+questions transfer verbatim&mdash;how many blocks until the distribution of
+\(h_i\) is uniform? is there cutoff? what is the spectral gap?&mdash;and, to
+our knowledge, none has been answered, or seriously asked, for any
+member of the SHA family at any scale. The obstruction is instructive:
+the representation-theoretic engine wants a group acting on itself, and
+the walk lives merely on a set&mdash;unless one exploits the two group
+structures the set actually carries (<a class="xref" href="03-geometry.html#sec:statespace">&sect;3.2</a>). Here is a
+place where the paper&rsquo;s finite geometry and a fully developed classical
+theory face each other across a gap that small experiments can begin to
+survey.</p>
+
+<div class="project" id="project-8">
+  <div class="project-title">Project 8: Cutoff for toy compression walks</div>
+  <p>Shrink the compression function (<a class="xref" href="03-geometry.html#sec:roundshape">&sect;3.3</a>) to an \(8\)- or
+  \(16\)-bit state. Random message blocks then make chaining a random
+  walk on \(2^{8}\) or \(2^{16}\) points: build its transition matrix,
+  compute the spectral gap, plot total-variation distance to uniformity
+  against the number of blocks, and look for a cutoff profile. Vary the
+  rounds-per-block and watch the gap and the cutoff window move. Every
+  quantity here is exactly computable at toy scale, and the questions
+  are verbatim those of the shuffling literature.</p>
+  <div class="project-meta"><em>Prerequisites:</em> probability; linear algebra; programming &ensp; <em>Window:</em> 4&ndash;6 weeks</div>
+</div>
+
+<p>The interlude&rsquo;s moral for <a class="xref" href="#sec:gap">&sect;6.7</a>: on one flank of <span class="sha">SHA-256</span> stands
+a complete algebraic theory of linear generators, on the other a
+complete probabilistic theory of mixing walks on groups; the function
+itself was engineered into the mathematical no-man&rsquo;s-land between
+them&mdash;touching complex analysis through <a class="xref" href="04-random-maps.html#sec:randommaps">&sect;4</a>, finite
+fields and \(2\)-adic analysis through <a class="xref" href="03-geometry.html#sec:statespace">&sect;3.2</a>,
+representation theory through the walk just described, and complexity
+theory through <a class="xref" href="#sec:definitions">&sect;6.1</a>&mdash;and nearly every one of those
+contacts is an unfollowed lead rather than a developed theory.</p>
+
+<h2 id="sec:gap">6.7&ensp;The gap, stated plainly <a class="pdf-ref" href="kng256.pdf#page=41">PDF p. 41</a></h2>
+
+<p>Now place the object among its relatives, the pseudorandom number
+generators, along two informal axes: how fast it is, and how much theory
+supports its randomness claims (<a class="xref" href="#fig:prngspace">Figure 12</a>).</p>
+
+<figure class="viz-figure" id="fig:prngspace">
+  <svg viewBox="0 0 640 370" role="img" aria-label="A two-axis cartoon map of PRNG space: analytical understanding (horizontal) against speed and practicality (vertical). LCG and the Mersenne Twister sit in the fast, fully-understood upper right; number-theoretic PRGs sit in the provable-but-slow lower right; SHA-256 sits alone in the fast, theory-free upper left; a brace marks the empty gap between them." style="max-width:640px;width:100%;height:auto;display:block;margin:0 auto;">
+    <defs>
+      <marker id="prng-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="var(--ink)"/>
+      </marker>
+    </defs>
+    <!-- axes -->
+    <line x1="40" y1="330" x2="588" y2="330" stroke="var(--ink-secondary)" stroke-width="1.4" marker-end="url(#prng-arrow)"/>
+    <line x1="40" y1="330" x2="40" y2="34" stroke="var(--ink-secondary)" stroke-width="1.4" marker-end="url(#prng-arrow)"/>
+    <text x="586" y="350" font-size="12.5" fill="var(--ink)" text-anchor="end">analytical understanding</text>
+    <text x="24" y="182" font-size="12.5" fill="var(--ink)" text-anchor="middle" transform="rotate(-90 24 182)">speed / practicality</text>
+    <!-- fully understood, weak -->
+    <text x="480" y="66" font-size="13" fill="var(--ink)" text-anchor="middle" font-weight="600">LCG</text>
+    <text x="480" y="82" font-size="10.5" fill="var(--ink-secondary)" text-anchor="middle">lattice structure: solved, weak</text>
+    <text x="431" y="134" font-size="13" fill="var(--ink)" text-anchor="middle" font-weight="600">Mersenne Twister</text>
+    <text x="431" y="150" font-size="10.5" fill="var(--ink-secondary)" text-anchor="middle">&#x1D53D;&#8322;-linear: solved, distinguishable</text>
+    <!-- provable, slow -->
+    <text x="455" y="266" font-size="13" fill="var(--ink)" text-anchor="middle" font-weight="600">number-theoretic PRGs</text>
+    <text x="455" y="282" font-size="10.5" fill="var(--ink-secondary)" text-anchor="middle">provable from factoring-type</text>
+    <text x="455" y="295" font-size="10.5" fill="var(--ink-secondary)" text-anchor="middle">assumptions, slow</text>
+    <!-- SHA-256 -->
+    <circle cx="114" cy="79" r="24" fill="var(--projfill)" stroke="var(--green)" stroke-width="2.5"/>
+    <text x="114" y="83" font-size="11" fill="var(--navy)" text-anchor="middle" font-weight="600">SHA-256</text>
+    <text x="146" y="76" font-size="10.5" fill="var(--ink-muted)">passes every test,</text>
+    <text x="146" y="89" font-size="10.5" fill="var(--ink-muted)">no theory at all</text>
+    <!-- the gap: brace bulging toward the empty lower-left region -->
+    <path d="M 176 113
+             Q 170.3 121.2 178.5 126.9
+             L 249.1 176.0
+             Q 257.3 181.7 251.6 189.9
+             Q 257.3 181.7 265.5 187.4
+             L 336.1 236.5
+             Q 344.3 242.2 350 234"
+          fill="none" stroke="var(--wine)" stroke-width="1.4"/>
+    <text x="216" y="236" font-size="11.5" fill="var(--wine)" font-style="italic" text-anchor="middle" transform="rotate(35 216 236)">the gap: no intermediate landmarks</text>
+  </svg>
+  <figcaption><strong>Figure 12.</strong> A cartoon of PRNG space. Classical generators are fast and
+  fully understood&mdash;which is exactly how one knows they are weak.
+  Number-theoretic generators carry proofs (conditional on hardness
+  assumptions) and are slow. <span class="sha">SHA-256</span> sits alone: fastest, empirically
+  strongest, and analytically blank.
+    <a class="pdf-ref" href="kng256.pdf#page=41">PDF p. 41</a></figcaption>
+</figure>
+
+<p>The classical generators are <em>transparent</em>: linear congruential
+generators are so well understood that their defects (Marsaglia&rsquo;s
+lattice planes) are theorems; twisters are \(\Ftwo\)-linear and hence
+completely analyzable, and completely distinguishable. At the other
+extreme, number-theoretic generators (of Blum&ndash;Micali type) come with
+genuine reductions&mdash;distinguishing their output is provably as hard as
+factoring-type problems&mdash;purchased at a price of thousands of arithmetic
+operations per output bit. <span class="sha">SHA-256</span> belongs to neither culture: it has
+<em>no</em> reduction to any studied hard problem, <em>no</em> algebraic
+model that survives even a handful of rounds, and <em>no</em> distinguisher
+after twenty-five years. It is simultaneously the best-tested and least
+theorized object in the entire space.</p>
+
+<p>Why should the gap be so large? Part of the answer is a legitimate
+excuse: an unconditional proof that <span class="sha">SHA-256</span> (or anything) is a one-way or
+pseudorandom function would imply \(\mathrm{P} \ne \mathrm{NP}\) and more;
+in Impagliazzo&rsquo;s celebrated taxonomy of possible computational worlds,
+whether we live in a world with one-way functions at all
+(&ldquo;Minicrypt&rdquo;/&ldquo;Cryptomania&rdquo; versus &ldquo;Algorithmica&rdquo;/&ldquo;Pessiland&rdquo;)
+is precisely the great open question&nbsp;<a class="cite" href="bibliography.html#Impagliazzo1995">(Impagliazzo, 1995)</a>. Nobody
+should demand a proof. But the excuse covers less than the gap. Between
+&ldquo;unconditional proof&rdquo; and &ldquo;nothing&rdquo; there is an enormous unexplored
+middle: reductions to <em>any</em> clean assumption; partial structure
+theorems for few rounds; quantitative mixing results in either of the two
+geometries of <a class="xref" href="03-geometry.html#sec:statespace">&sect;3.2</a>; distributional results in Flajolet&rsquo;s
+coordinates for scaled-down families (<a class="xref" href="04-random-maps.html#sec:randommaps">&sect;4</a>). For linear
+generators that middle territory is dense with theorems; for ARX
+functions it is nearly empty&mdash;not, as far as we can tell, because
+theorems are known to be impossible, but because the object fell into a
+disciplinary crack: too applied for one community, too structureless for
+another, and (a hypothesis this prospectus exists to test) never yet
+attacked with the analytic-combinatorics instrument at the appropriate
+model-organism scale.</p>
+
+<p>That is the research program: not &ldquo;prove <span class="sha">SHA-256</span> secure&rdquo;&mdash;nobody sane
+proposes that&mdash;but <em>populate the gap with measurements</em>: an atlas
+of scaled-down <span class="sha">SHA-256</span>-family maps (fewer rounds, narrower words, fewer
+words), located in Flajolet&rsquo;s coordinate system, with the two-geometry
+anatomy of <a class="xref" href="03-geometry.html#sec:statespace">&sect;3.2</a> guiding which scaled families to
+compare. Every panel of that atlas is a small, finishable, publishable
+piece of natural history; <a class="xref" href="09-projects.html#sec:projects">&sect;9</a> cuts it into
+undergraduate-sized pieces.</p>
+
+<div class="project" id="project-9">
+  <div class="project-title">Project 9: Where do the tests start failing?</div>
+  <p>Reduced-round <span class="sha">SHA-256</span> must fail statistical batteries&mdash;at one round it
+  is nearly raw message. Find the phase transition: run
+  SP&thinsp;800-22&nbsp;<a class="cite" href="bibliography.html#NIST2010">(Rukhin et al., 2010)</a> and TestU01&nbsp;<a class="cite" href="bibliography.html#LEcuyerSimard2007">(L&rsquo;Ecuyer and Simard, 2007)</a>
+  against generators built from \(r\)-round <span class="sha">SHA-256</span> for \(r = 1, 2, \dots\)
+  and chart which tests fail at which \(r\). Compare with the round counts
+  where cryptanalysis stalls (<a class="xref" href="#sec:below">&sect;6.4</a>). The two &ldquo;difficulty
+  frontiers&rdquo; have, to our knowledge, never been plotted on one axis.</p>
+  <div class="project-meta"><em>Prerequisites:</em> programming; statistics &ensp; <em>Window:</em> 4&ndash;6 weeks</div>
+</div>
+
+<div class="project" id="project-10">
+  <div class="project-title">Project 10: Avalanche cartography</div>
+  <p>Flip one input bit; which of the 256 output bits flip? For the true
+  random-function silhouette each flips independently with probability
+  \(\tfrac12\)&nbsp;<a class="cite" href="bibliography.html#WebsterTavares1985">(Webster and Tavares, 1986)</a>. Measure the full \(512 \times 256\)
+  influence matrix round by round, render it as heatmaps, and quantify
+  convergence to \(\tfrac12\) (in what norm? after how many rounds?
+  uniformly over bit positions?). Then close the loop to the ledger of
+  <a class="xref" href="#sec:below">&sect;6.4</a>: confirm that full-round avalanche forces the counter
+  stream&rsquo;s lag-\(1\) autocorrelation to zero, and measure how many rounds
+  are needed before that self-correlation vanishes. Relate the observed
+  diffusion speed to the rotation constants of
+  <a class="xref" href="03-geometry.html#sec:roundshape">&sect;3.3</a>&mdash;the designers&rsquo; choices become visible as
+  geography.</p>
+  <div class="project-meta"><em>Prerequisites:</em> programming; linear algebra &ensp; <em>Window:</em> 4&ndash;6 weeks</div>
+</div>
+
+<h2 id="sec:provable">6.8&ensp;The road not taken: hashes with theorems <a class="pdf-ref" href="kng256.pdf#page=43">PDF p. 43</a></h2>
+
+<p>One region of <a class="xref" href="#fig:prngspace">Figure 12</a> deserves its own visit before we
+leave the map: the lower right, where proofs live and speed dies. It is
+not empty of hash functions. <em>Provably secure</em> hash functions
+exist, several are beautiful mathematics, and the world declined every
+one of them; both halves of that sentence are instructive.</p>
+
+<p>Exhibit one: VSH, &ldquo;very smooth hash&rdquo;&nbsp;<a class="cite" href="bibliography.html#ContiniLenstraSteinfeld2006">(Contini et al., 2006)</a>.
+Its collision resistance is an honest theorem, conditional on a single
+clean number-theoretic assumption (finding congruences of a certain
+smooth-square kind modulo a hard-to-factor \(n\)), and it is fast by the
+standards of its genre&mdash;only \(25\) times or so slower than the SHA
+family, where earlier provable designs had been slower by thousands.
+But the same multiplicative structure that powers the proof is
+<em>visible in the outputs</em>: VSH is not remotely a random-oracle
+stand-in (short relations among hash values exist by construction), so
+of the whole catalogue of <a class="xref" href="02-history.html#sec:uses">&sect;2.1</a> it can serve collision-bound
+uses only. The proof purchases one property by installing exactly the
+kind of algebraic transparency that <a class="xref" href="#sec:prngs">&sect;6.6</a> showed to be fatal
+to all the others.</p>
+
+<p>Exhibit two is closer to this paper&rsquo;s geometry. <em>Cayley hashes</em>
+walk a graph: fix a group \(G\) and two generators \(g_0, g_1\); hash a bit
+string by reading it as directions,
+\(m_1 m_2 \cdots m_k \mapsto g_{m_1} g_{m_2} \cdots g_{m_k}\). Tillich
+and Z&eacute;mor proposed \(G = \mathrm{SL}_2(\mathbb{F}_{2^n})\) in
+1994&nbsp;<a class="cite" href="bibliography.html#TillichZemor1994">(Tillich and Z&eacute;mor, 1994)</a>; Charles, Goren, and Lauter modernized
+the idea with Lubotzky&ndash;Phillips&ndash;Sarnak Ramanujan graphs and, in a
+second variant, supersingular isogeny graphs of elliptic
+curves&nbsp;<a class="cite" href="bibliography.html#CharlesGorenLauter2009">(Charles et al., 2009)</a>. Two theorems come for free.
+A collision is a pair of distinct words with the same product&mdash;so
+collision resistance <em>is</em> a group-theoretic statement (no short
+relations among the generators are findable), inherited whole from a
+recognizable mathematical problem. And output quality is spectral: if
+the Cayley graph is an <em>expander</em>&mdash;nontrivial eigenvalues
+uniformly bounded away from the degree&mdash;then the distribution of
+hashes of length-\(k\) messages converges to uniform at an exponential
+rate governed by the spectral gap&nbsp;<a class="cite" href="bibliography.html#HooryLinialWigderson2006">(Hoory et al., 2006)</a>.
+The mixing mathematics of <a class="xref" href="#sec:prngs">&sect;6.6</a> returns, no longer as
+analysis but as a <em>design principle</em>: these are hash functions
+whose avalanche property is a theorem about eigenvalues.</p>
+
+<p>Then the pothole. In 2008 the LPS instantiation was broken&mdash;collisions
+computed outright&mdash;by lifting the problem from the finite group to a
+characteristic-zero arithmetic where Euclidean-style algorithms find
+short relations; the authors of the break were Tillich and Z&eacute;mor,
+the designers of 1994, and their own original \(\mathrm{SL}_2\) proposal
+later fell, for its published parameters, to a similar
+lift&nbsp;<a class="cite" href="bibliography.html#TillichZemor2008">(Tillich and Z&eacute;mor, 2008)</a>. Note carefully what died. The theorems
+were and remain true; the <em>assumptions</em> were false&mdash;the
+underlying group problems, young and algebraically rich, simply were
+not hard. (The isogeny-graph sibling&rsquo;s assumption has so far survived,
+and seeded a whole branch of post-quantum cryptography.) The moral is
+the sober one: a security proof does not abolish risk, it relocates
+risk from the object to the assumption, and an assumption chosen for
+its provability can be weaker than ignorance. Set beside
+<a class="xref" href="02-history.html#sec:falling">&sect;2.3</a>: MD5 fell <em>with</em> twenty years of massive use
+and no theorem; LPS fell <em>with</em> a theorem and almost no use. The
+fossil record refuses to pick a side.</p>
+
+<p>Why, then, does the world run on the theorem-free object? Speed is the
+visible reason&mdash;two orders of magnitude&mdash;but the load-bearing one is
+now easy to state with this section&rsquo;s vocabulary: every use of
+<a class="xref" href="02-history.html#sec:uses">&sect;2.1</a> beyond bare collision resistance needs the
+random-oracle <em>pretension</em>, behaving like structurelessness
+itself, and a provable design is structured <em>by construction</em>;
+its proof and its disqualification are the same fact. The market
+equilibrium of <a class="xref" href="#fig:prngspace">Figure 12</a> is thus not an accident of
+laziness: given the choice between an object about which something is
+proved and something else is visibly false, and an object about which
+nothing is proved and nothing is visibly false, every deployed system
+chose the second, with Rogaway&rsquo;s human-ignorance calculus
+(<a class="xref" href="#sec:definitions">&sect;6.1</a>) as the honest license. The gap is not a hole
+in the market; it is the market.</p>
+
+<div class="project" id="project-11">
+  <div class="project-title">Project 11: Cayley hashes by hand</div>
+  <p>Implement the Tillich&ndash;Z&eacute;mor hash&nbsp;<a class="cite" href="bibliography.html#TillichZemor1994">(Tillich and Z&eacute;mor, 1994)</a> at toy
+  scale: \(\mathrm{SL}_2(\mathbb{F}_{2^n})\) for \(n = 8, \dots, 16\), two
+  generator matrices, hash \(=\) matrix product read off the message
+  bits. (i) Measure output equidistribution against message length and
+  match the exponential rate to the spectral gap of the Cayley graph,
+  computable by eigenvalue methods at this
+  scale&nbsp;<a class="cite" href="bibliography.html#HooryLinialWigderson2006">(Hoory et al., 2006)</a>&mdash;the mixing theory of
+  <a class="xref" href="#sec:prngs">&sect;6.6</a> as a bench experiment. (ii) Hunt collisions two
+  ways, generic birthday search versus structure (palindromic words,
+  elements of small order, subfield membership), and compare costs.
+  (iii) As a stretch goal, read the lifting attack&nbsp;<a class="cite" href="bibliography.html#TillichZemor2008">(Tillich and Z&eacute;mor, 2008)</a>
+  and implement its Euclidean core for tiny parameters. Deliverable: a
+  working Cayley hash, gap-versus-equidistribution plots, and a
+  collision gallery&mdash;provable cryptography&rsquo;s rise and fall on one
+  laptop.</p>
+  <div class="project-meta"><em>Prerequisites:</em> group theory; linear algebra; programming &ensp; <em>Window:</em> 3&ndash;4 weeks</div>
+</div>
+
+<div id="pagenav"></div>
+</main>
+</div>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="assets/site.js"></script>
+<script defer src="assets/viz.js"></script>
+</body>
+</html>

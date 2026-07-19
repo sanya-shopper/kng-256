@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>§9 · Undergraduate short projects — SHA-256 as a Mathematical Object</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="09-projects.html">
+<div class="layout">
+<nav id="sidebar"></nav>
+<main id="content">
+<header class="page-head">
+  <p class="doc-title"><a href="index.html">SHA-256 as a Mathematical Object</a></p>
+</header>
+
+<h1 id="sec:projects">§9&ensp;Undergraduate short projects <a class="pdf-ref" href="kng256.pdf#page=56" title="Open this section in the PDF">PDF&nbsp;p.&nbsp;56</a></h1>
+
+<p>The preceding sections flagged thirteen concrete projects at the point where
+each becomes natural; here we collect them and add the program-level view.
+The unifying activity is <em>measurement</em>: locating scaled-down members
+of the <span class="sha">SHA-256</span> design family in coordinate systems (Flajolet&rsquo;s above all)
+where &ldquo;looks random&rdquo; becomes a number with error bars. None of the
+projects requires cryptographic background beyond this paper; all require
+programming and a taste for experiment; each produces figures and data
+that are a contribution regardless of what they show. That last property
+is worth underlining for research with undergraduates in short windows:
+these are experiments that <em>cannot fail</em>, only surprise.</p>
+
+<table class="paper-table">
+  <thead>
+    <tr>
+      <th>project (defined in)</th>
+      <th>prerequisites</th>
+      <th>window</th>
+      <th>deliverable</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Single ops under the \(2\)-adic lens (<a class="xref" href="03-geometry.html#sec:statespace">§3.2</a>)</td>
+      <td>elementary number theory</td>
+      <td>3&ndash;4 wks</td>
+      <td>verified ergodicity criteria, orbit visualizations</td>
+    </tr>
+    <tr>
+      <td>The linear algebra of diffusion (<a class="xref" href="03-geometry.html#sec:rivest">§3.5</a>)</td>
+      <td>linear algebra</td>
+      <td>3&ndash;4 wks</td>
+      <td>invertibility &amp; group structure of the \(\Sigma/\sigma\) maps</td>
+    </tr>
+    <tr>
+      <td>Exact inverses of \(\Sigma_0, \Sigma_1\) (<a class="xref" href="03-geometry.html#sec:rivest">§3.5</a>)</td>
+      <td>polynomials over \(\Ftwo\)</td>
+      <td>2&ndash;3 wks</td>
+      <td>closed-form inverse maps, verified two ways</td>
+    </tr>
+    <tr>
+      <td>Functional-graph atlas of truncated <span class="sha">SHA-256</span> (<a class="xref" href="04-random-maps.html#sec:telescope">§4.3</a>)</td>
+      <td>probability, programming</td>
+      <td>6&ndash;8 wks</td>
+      <td>atlas of measured vs. predicted statistics</td>
+    </tr>
+    <tr>
+      <td>Collision hunting, van Oorschot&ndash;Wiener style (<a class="xref" href="04-random-maps.html#sec:telescope">§4.3</a>)</td>
+      <td>probability, programming</td>
+      <td>4&ndash;6 wks</td>
+      <td>timing distributions vs. theory; parallel implementation</td>
+    </tr>
+    <tr>
+      <td>The dynamics of iteration (<a class="xref" href="05-iterated.html#sec:iterated">§5</a>)</td>
+      <td>probability, programming</td>
+      <td>6&ndash;8 wks</td>
+      <td>image-shrinkage law, fixed points, Hellman trade-off</td>
+    </tr>
+    <tr>
+      <td>Cutoff for toy compression walks (<a class="xref" href="06-frameworks.html#sec:prngs">§6.6</a>)</td>
+      <td>probability, linear algebra</td>
+      <td>4&ndash;6 wks</td>
+      <td>spectral gaps and cutoff profiles vs. rounds</td>
+    </tr>
+    <tr>
+      <td>Cayley hashes by hand (<a class="xref" href="06-frameworks.html#sec:provable">§6.8</a>)</td>
+      <td>group theory, linear algebra</td>
+      <td>3&ndash;4 wks</td>
+      <td>spectral gap vs. equidistribution; collision gallery</td>
+    </tr>
+    <tr>
+      <td>Differential trails in miniature (<a class="xref" href="07-differential.html#sec:siege">§7.4</a>)</td>
+      <td>probability, programming</td>
+      <td>4&ndash;6 wks</td>
+      <td>exact toll tables; best-trail probability vs. rounds</td>
+    </tr>
+    <tr>
+      <td>The <span class="sc">sat</span> cliff (<a class="xref" href="08-computability.html#sec:npsearch">§8.1</a>)</td>
+      <td>programming, logic</td>
+      <td>4&ndash;6 wks</td>
+      <td>solver-time cliff chart; three frontiers on one axis</td>
+    </tr>
+    <tr>
+      <td>A neural distinguisher at toy scale (<a class="xref" href="07-differential.html#sec:mlcrypt">§7.5</a>)</td>
+      <td>programming, machine learning</td>
+      <td>6&ndash;8 wks</td>
+      <td>learned-advantage vs. rounds; interpretation of the model</td>
+    </tr>
+    <tr>
+      <td>Where do the tests start failing? (<a class="xref" href="06-frameworks.html#sec:gap">§6.7</a>)</td>
+      <td>statistics, programming</td>
+      <td>4&ndash;6 wks</td>
+      <td>round-by-round battery failure chart</td>
+    </tr>
+    <tr>
+      <td>Avalanche cartography (<a class="xref" href="06-frameworks.html#sec:gap">§6.7</a>)</td>
+      <td>linear algebra, programming</td>
+      <td>4&ndash;6 wks</td>
+      <td>influence-matrix heatmaps by round</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Three remarks on the program as a whole.</p>
+
+<h3 class="runin">Model organisms.</h3>
+<p>The full-scale function is beyond experiment
+(<a class="xref" href="04-random-maps.html#sec:telescope">§4.3</a>) and beyond proof (<a class="xref" href="06-frameworks.html#sec:gap">§6.7</a>); the program
+therefore studies the <em>family</em> obtained by shrinking each design
+parameter&mdash;word size \(32 \to 8\) or \(16\), state words \(8 \to 4\), rounds
+\(64 \to r\)&mdash;the way biology studies fruit flies. The two-geometry anatomy
+of <a class="xref" href="03-geometry.html#sec:statespace">§3.2</a> says which shrinkings are honest: one must
+preserve the ARX alternation, or the object degenerates into something a
+single lens solves. A systematic scaled family, with its statistics
+measured, would be a reusable community resource; no standard one exists.</p>
+
+<h3 class="runin">The comparative method.</h3>
+<p>Every measurement gains meaning from
+controls on both sides: genuinely random maps (the Flajolet silhouette)
+on one side, and visibly structured maps (bijections, \(\Ftwo\)-linear
+maps, one-round toys) on the other. The interesting science is in the
+<em>trajectory</em>&mdash;how, as rounds accumulate, a <span class="sha">SHA-256</span>-family map walks
+from the structured region onto the random silhouette, in which
+coordinates it arrives first, and whether the walk is gradual or a phase
+transition. SHA-1 and <span class="sha">SHA-256</span> can be given the identical treatment; given
+<a class="xref" href="02-history.html#sec:falling">§2.3</a>, any measurable divergence between their trajectories
+would be a finding of genuine interest.</p>
+
+<h3 class="runin">Odds of surprise.</h3>
+<p>Realistically: most measurements will
+confirm the random silhouette, and their value is the atlas itself plus
+trained students. But the history of <a class="xref" href="01-josephus.html#sec:josephus">§1</a> cuts both
+ways&mdash;structure, when it exists in innocent-looking discrete processes,
+has repeatedly been found by exactly this kind of patient small-case
+empiricism, and essentially nobody has pointed the analytic-combinatorics
+instrument at this family at model-organism scale. The expected value of
+looking is small-positive; the tail is long.</p>
+
+<p><em>On tooling.</em> Everything above runs comfortably in Python
+or Julia on a laptop for \(n \le 30\); the collision-hunting and atlas
+projects scale gracefully to whatever cluster time is available. We
+maintain reference implementations and are happy to share scaffolding so
+that student time goes to science rather than plumbing.</p>
+
+<div id="pagenav"></div>
+</main>
+</div>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="assets/site.js"></script>
+<script defer src="assets/viz.js"></script>
+</body>
+</html>

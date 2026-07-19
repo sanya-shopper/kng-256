@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>§2 · The object, observed from outside — SHA-256 as a Mathematical Object</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="02-history.html">
+<div class="layout">
+<nav id="sidebar"></nav>
+<main id="content">
+<header class="page-head">
+  <p class="doc-title"><a href="index.html">SHA-256 as a Mathematical Object</a></p>
+</header>
+
+<h1 id="sec:history">§2&ensp;The object, observed from outside <a class="pdf-ref" href="kng256.pdf#page=5" title="Open this section in the PDF">PDF&nbsp;p.&nbsp;5</a></h1>
+
+<p>Before any internals, here is the object as its users see it. <span class="sha">SHA-256</span> is a
+single, fixed, publicly specified function
+\[
+  \SHA : \bigcup_{0 \,\le\, \ell \,&lt; \, 2^{64}} \bitstrings^{\ell}
+         \;\longrightarrow\; \bitstrings^{256},
+\]
+published by the U.S. National Institute of Standards and Technology in
+2002 and unchanged since&nbsp;<a class="cite" href="bibliography.html#FIPS180-4">(National Institute of Standards and Technology, 2015)</a>. It takes a bit string of any
+length below \(2^{64}\)—the empty string, a single bit, the concatenated
+works of a library—and returns \(256\) bits. (We stress <em>bit</em> string:
+the standard defines the function on arbitrary bit lengths, not merely on
+whole bytes; software interfaces usually round to bytes, but the
+mathematical object does not. This matters in <a class="xref" href="03-geometry.html#sec:geometry">§3</a>.)</p>
+
+<p>Two set-theoretic observations frame everything that follows. The domain
+is astronomically larger than the codomain, so the function is nowhere
+near injective: by pigeonhole, colliding pairs exist in unimaginable
+abundance—the average fiber over a \(256\)-bit output is itself a set of
+size around \(2^{2^{64}-256}\). Whether the function is <em>surjective</em>,
+on the other hand, is not known: nobody has proved that every \(256\)-bit
+string is attained, and more generally nothing nontrivial is proved about
+the image size or about how evenly the domain is spread across the
+range—the property Bellare and Kohno isolate as hash-function
+<em>balance</em>, showing that deviations from it would measurably
+accelerate collision search&nbsp;<a class="cite" href="bibliography.html#BellareKohno2004">(Bellare and Kohno, 2004)</a>; for <span class="sha">SHA-256</span> the
+balance is simply unknown. Heuristically, of course, a random function
+with this domain misses a given output with probability too small to
+name, and <a class="xref" href="04-random-maps.html#sec:randommaps">§4</a> is about taking such heuristics seriously
+as measurements.</p>
+
+<p>The function is deterministic and involves no secrets: everyone can evaluate
+it, and everyone computes the same values.<sup class="fn"><a href="#fn1" id="fnref1">1</a></sup> It is also fast, in a way
+worth pausing on: the definition is in effect a small fixed circuit of
+bitwise operations and \(32\)-bit additions, so it is directly expressible
+in hardware. A laptop core computes it at gigabytes per second; dedicated
+silicon does far better—purpose-built <span class="sha">SHA-256</span> ASIC designs were an
+academic subject within two years of
+standardization&nbsp;<a class="cite" href="bibliography.html#Dadda2004">(Dadda et al., 2004)</a>, and the economics of proof-of-work
+mining (<a class="xref" href="#sec:uses">§2.1</a>) later industrialized them, the arc from CPU
+software to modern mining ASICs gaining roughly six orders of magnitude
+in throughput per device and five in energy per hash&nbsp;<a class="cite" href="bibliography.html#Taylor2017">(Taylor, 2017)</a>.</p>
+
+<p>What is it <em>for</em>? The honest answer is: for behaving, in public, like
+a random function—a function sampled uniformly at random from the set of
+all functions into \(\bitstrings^{256}\)—while actually being a short,
+fixed program. All of its uses are corollaries of facets of that one
+pretension.</p>
+
+<h2 id="sec:uses">2.1&ensp;A catalogue of uses <a class="pdf-ref" href="kng256.pdf#page=6">PDF p. 6</a></h2>
+
+<dl>
+  <dt>Fingerprinting.</dt>
+  <dd>If \(H\) behaves like a random function, two
+  different documents have the same \(256\)-bit hash with probability
+  \(2^{-256}\); a hash is a practically unforgeable fingerprint. The
+  version-control system Git addresses every object it stores by its hash:
+  file contents, directory trees, commits. Equality of fingerprints is
+  treated as equality of content—mathematically unjustified and, at
+  planetary scale, empirically flawless so far.</dd>
+
+  <dt>Commitment.</dt>
+  <dd>Publish \(H(x)\) today, reveal \(x\) next month; anyone
+  can verify you did not change your mind, yet the hash revealed nothing
+  about \(x\). A random-looking function gives sealed envelopes without
+  paper. (This is how one archives a prediction, a bid, or a claim of
+  priority.)</dd>
+
+  <dt>Merkle trees.</dt>
+  <dd>Hash the leaves; hash the concatenations of sibling
+  hashes; repeat. The root is a \(256\)-bit commitment to an arbitrarily
+  large collection, and membership of any single leaf is certified by a
+  logarithmic-length path&nbsp;<a class="cite" href="bibliography.html#Merkle1988">(Merkle, 1988</a>; <a class="cite" href="bibliography.html#Merkle1989">Merkle, 1990a)</a>. Certificate Transparency
+  (the public audit log of all TLS certificates on the web) and every
+  blockchain are Merkle trees at heart. Notice the epistemic shape of
+  what the tree provides: the inclusion of one transaction among
+  billions is <em>proved</em> by a chain of a few dozen hashes—a
+  certificate anyone can verify in microseconds, revealing essentially
+  nothing about the other leaves. Pushed further, this seed grows into
+  the theory of zero-knowledge and succinct proof
+  systems&nbsp;<a class="cite" href="bibliography.html#GMR1989">(Goldwasser et al., 1989)</a>: modern hash-based protocols such as STARKs
+  commit to the execution trace of an entire computation with a Merkle
+  tree, then prove its correctness by opening a few hash
+  chains&nbsp;<a class="cite" href="bibliography.html#BenSasson2018">(Ben-Sasson et al., 2018)</a>. The pattern recurs everywhere in
+  mathematical cryptography and deserves explicit statement: a task—here, inverting or colliding <span class="sha">SHA-256</span>—is <em>presumed</em> hard, and the
+  presumed hardness then serves as a primitive from which richer
+  structures (commitments, proofs, signatures, digital money) are built
+  by explicit reduction. Hardness conjectures function the way axioms do
+  elsewhere in mathematics: unproved, load-bearing, and generative.</dd>
+
+  <dt>Message authentication.</dt>
+  <dd>With a shared secret key \(k\), the
+  construction \(\mathrm{HMAC}(k, m)\), built from two nested <span class="sha">SHA-256</span> calls,
+  authenticates messages; its analysis&nbsp;<a class="cite" href="bibliography.html#BCK1996">(Bellare et al., 1996)</a> is a rare case of a
+  <em>theorem</em> in this landscape—assuming the compression function
+  behaves as a pseudorandom family, a notion we take up in
+  <a class="xref" href="06-frameworks.html#sec:frameworks">§6</a>.</dd>
+
+  <dt>Proof of work.</dt>
+  <dd>Bitcoin asks miners to find a nonce making
+  \(\SHA(\SHA(\text{block header}))\) land below a target
+  threshold&nbsp;<a class="cite" href="bibliography.html#Nakamoto2008">(Nakamoto, 2008)</a>. If the function behaves randomly, there
+  is no better strategy than exhaustive guessing, so a solution <em>is</em>
+  verifiable evidence of expended computation. As of this writing the
+  Bitcoin network evaluates the function roughly \(10^{21}\) times per
+  second—surely the most intensively exercised nontrivial function in
+  the history of mathematics—and this entire expenditure is, among other
+  things, a brute-force search for regularities that has found none.</dd>
+
+  <dt>Key derivation and pseudorandom generation.</dt>
+  <dd>Operating systems
+  stretch and mix entropy pools through <span class="sha">SHA-256</span>; standardized deterministic
+  random-bit generators iterate it. Here the function is used precisely
+  <em>as</em> a pseudorandom number generator, which frames the question of
+  <a class="xref" href="06-frameworks.html#sec:frameworks">§6</a>: where does it sit in the space of PRNGs?</dd>
+</dl>
+
+<p>Note how different the demands of these uses are: fingerprinting needs
+<em>collision resistance</em> (no collision \(x \ne y\) with \(H(x) = H(y)\)
+has ever been <em>published</em>—though note the epistemic fine print:
+were one discovered, its discoverer might have excellent reasons to keep
+it private),
+commitments need <em>hiding</em> and <em>binding</em>, proof-of-work needs
+<em>progress-freeness</em> (no shortcut to partial preimages), key
+derivation needs <em>pseudorandomness of outputs</em>. A taxonomy of these
+properties and their logical relations exists&nbsp;<a class="cite" href="bibliography.html#RogawayShrimpton2004">(Rogaway and Shrimpton, 2004)</a>,
+and the standard reference surveying the whole subject at textbook depth
+is the Handbook chapter of Menezes et al. <a class="cite" href="bibliography.html#MenezesOorschotVanstone1996">(1996, Ch.&nbsp;9)</a>;
+the striking fact is that one fixed function is trusted, simultaneously,
+with all of them.</p>
+
+<h2 id="sec:elderhash">2.2&ensp;The original hash functions <a class="pdf-ref" href="kng256.pdf#page=7">PDF p. 7</a></h2>
+
+<p>The word “hash” is decades older than its cryptographic sense, and the
+two meanings are worth separating before the cryptographic one takes over
+the paper. Hashing as a storage technique is nearly as old as
+stored-program computing: scatter-storage schemes circulated inside IBM
+from 1953 (in an internal memorandum of H.&nbsp;P. Luhn), reached the open
+literature with Peterson’s study of random-access
+addressing&nbsp;<a class="cite" href="bibliography.html#Peterson1957">(Peterson, 1957)</a>, and were codified, history and all, in
+Knuth’s chapter on searching&nbsp;<a class="cite" href="bibliography.html#Knuth1998">(Knuth, 1998, §6.4)</a>. In that tradition
+a hash function need only <em>scatter</em>; collisions are a fact of life
+to be chained through, probed around, and amortized away, and nobody is
+trying to <em>manufacture</em> one.</p>
+
+<p>Here is a complete, honest member of that tradition, as a working
+one-liner,</p>
+<p class="center"><code>def h(k): return k % 997</code></p>
+<p>—division hashing, filing the integer key \(k\) into one of \(997\)
+buckets&nbsp;<a class="cite" href="bibliography.html#Knuth1998">(Knuth, 1998, §6.4)</a>. Mathematically it is the reduction
+map \(\mathbb{Z} \to \mathbb{Z}/997\mathbb{Z}\), and because that map is a
+ring homomorphism, every anatomical question one could ask of it has a
+one-line proof. Its collisions are not merely abundant but
+<em>listable</em>: the keys colliding with \(k\) are exactly the arithmetic
+progression \(k + 997\mathbb{Z}\). It is provably injective on a natural
+piece of its domain: any \(997\) consecutive keys land in \(997\) distinct
+buckets. It is provably surjective, with exact equidistribution: among
+any \(997m\) consecutive keys, every bucket is hit exactly \(m\) times. And
+it respects algebraic structure outright:
+\(h(j+k) \equiv h(j) + h(k)\) and \(h(jk) \equiv h(j)\,h(k) \pmod{997}\).</p>
+
+<p>How far does this transparency stretch toward <span class="sha">SHA-256</span>’s actual machinery?
+Further than one might guess. Trade the prime modulus for a power of two
+and make the map affine,
+\[
+  h(k) = (a\,k + b) \bmod 2^{n}, \qquad a \text{ odd},
+\]
+and <em>carries</em> enter the story: the multiplication and addition now
+ripple information from low-order bits into high ones—the \(2\)-adically
+continuous operations we meet again in <a class="xref" href="03-geometry.html#sec:statespace">§3.2</a>. Yet nothing
+is lost to analysis. With \(a\) odd the map is a <em>bijection</em> of the
+\(n\)-bit words (no longer a compressing bucket hash but a reversible
+mixing map), invertible in closed form as \(k = a^{-1}(h - b) \bmod 2^{n}\),
+where \(a^{-1}\) is the inverse of \(a\) modulo \(2^{n}\); iterated, it is
+precisely a linear congruential generator, whose period is a classical
+theorem (<a class="xref" href="06-frameworks.html#sec:prngs">§6.6</a>). Now throw an exclusive-or on top,
+\[
+  h(k) = \bigl((a\,k + b) \bmod 2^{n}\bigr) \shaxor c,
+\]
+and—the pleasant surprise—it stays analyzable: an \(\shaxor\) with a
+constant is itself a bijection, living in the <em>rival</em>
+\(\Ftwo\)-geometry of <a class="xref" href="03-geometry.html#sec:statespace">§3.2</a>, and a composition of bijections
+is a bijection, so the whole map is a reversible permutation one can still
+invert by hand. What one now holds is a one-round baby <span class="sha">SHA-256</span>: two of its
+three ARX primitives (carry-bearing arithmetic and \(\shaxor\)) already in
+place, and analyzable only because nothing yet forces the two geometries
+to <em>interfere</em>. <span class="sha">SHA-256</span> adds the third primitive—bitwise rotation,
+the operation that couples the geometries—and iterates the mixture
+\(64\) times; it is that composition, not any single ingredient, that
+carries the design out of reach of every one-line argument above.</p>
+
+<figure class="viz-figure viz-extra">
+  <div class="viz" id="viz-toyhash"></div>
+  <figcaption>The ancestral hashes, live: division hashing \(k \bmod 997\), the affine step \((ak+b) \bmod 2^{n}\), and the \(\shaxor\)-step — the one-round baby SHA. (Interactive; not in the PDF.)</figcaption>
+</figure>
+
+<h2 id="sec:falling">2.3&ensp;Cryptographic hash functions <a class="pdf-ref" href="kng256.pdf#page=8">PDF p. 8</a></h2>
+
+<p><span class="sha">SHA-256</span> is the survivor of an explicit evolutionary lineage, and the
+extinctions in that lineage are the best available evidence about what
+kind of object it is. The cryptographic branch split from the storage
+tradition of <a class="xref" href="#sec:elderhash">§2.2</a> the moment someone set out to
+<em>manufacture</em> collisions rather than merely tolerate them—the
+moment, that is, an adversary entered the room. One-way functions
+appeared first as a systems trick for protecting stored login passwords
+(in use by the late 1960s; first carefully engineered constructions
+in&nbsp;<a class="cite" href="bibliography.html#Purdy1974">Purdy, 1974</a>; the classic Unix case history
+in&nbsp;<a class="cite" href="bibliography.html#MorrisThompson1979">Morris and Thompson, 1979</a>); one-wayness was then named as a
+foundational primitive of the new public-key
+cryptography&nbsp;<a class="cite" href="bibliography.html#DiffieHellman1976">(Diffie and Hellman, 1976)</a>; and the modern object—a
+compressing, collision-resistant, <em>one-way hash function</em>—was
+isolated in Merkle’s 1979 dissertation&nbsp;<a class="cite" href="bibliography.html#Merkle1979">(Merkle, 1979)</a>. Same word as
+before, escalating demand: from “collisions are a performance nuisance”
+to “collisions exist in abundance, but no adversary on Earth can exhibit
+one.” The escalation is a change of adversary model, not of
+machinery—and it took thirty years to complete.</p>
+
+<p>Put the four-question anatomy exam of <a class="xref" href="#sec:elderhash">§2.2</a> in front of
+<span class="sha">SHA-256</span> now, and every clean answer becomes an open problem.
+Collisions: they exist in astronomical abundance (pigeonhole), yet none
+has ever been exhibited, and no known method materially beats generic
+birthday search at \(2^{128}\) evaluations (<a class="xref" href="04-random-maps.html#sec:telescope">§4.3</a>).
+Injectivity on a restricted domain: is <span class="sha">SHA-256</span> injective on the
+\(2^{128}\) inputs of exactly \(128\) bits? For a random function this
+would be very nearly a fair coin flip—the expected number of
+colliding pairs is about \(\tfrac12\)—and for <span class="sha">SHA-256</span> nobody can improve
+on that shrug in either direction. Surjectivity: unknown; a random
+function of these dimensions would miss at most a fantastically small
+fraction of its range, but nothing of the kind is proved. Respected
+structure: the design <em>intent</em> is the wholesale negation of the
+homomorphism property, and “respects nothing” is precisely the
+conjunction of unproved statements this paper keeps circling. Same
+species as the one-liner, same questions; but every answer has moved
+from a line of algebra to an open problem. The rest of the paper lives
+in that gap.</p>
+
+<p>The modern era begins with Merkle’s and Damgård’s 1989 work putting
+hash functions on a design principle. Rather than design a function on
+arbitrary-length inputs directly, one fixes a single <em>compression
+function</em> \(f\) that maps a fixed-size state and one message block to a new
+state, and extends it to messages of any length by iterating: split the
+(padded) message into blocks \(m_1, \dots, m_k\), start from a fixed
+initial value, and fold the blocks through \(f\) one at a time,
+\[
+  h_0 = \mathrm{IV}, \qquad
+  h_i = f(h_{i-1}, m_i), \qquad
+  H(m) = h_k,
+\]
+reading off the final chaining value \(h_k\) as the digest. The virtue of
+this construction is a <em>theorem</em>: any collision in the full hash \(H\)
+can be unwound into a collision in the single map \(f\), so collision
+resistance of the whole reduces to collision resistance of \(f\) alone (the
+Merkle–Damgård theorem, <a class="xref" href="03-geometry.html#thm:md">Theorem 3.1</a>). This is exactly the skeleton
+<span class="sha">SHA-256</span> is built on, compression function and all—the finite map \(f\) and
+the two theorems that wrap it are anatomized in
+<a class="xref" href="03-geometry.html#sec:merkledamgard">§3.1</a> and <a class="xref" href="03-geometry.html#sec:constructions">§3.4</a>. Rivest’s concrete proposals
+MD4 (1990) and MD5 (1992)&nbsp;<a class="cite" href="bibliography.html#RFC1321">(Rivest, 1992)</a> were the first mass-market
+instances—\(128\)-bit hashes built as fast iterated compression—and MD5
+was, for a decade, everywhere. NIST’s SHA-1 (1995) enlarged the state to
+\(160\) bits and adjusted the internals; it inherited MD5’s ubiquity. The
+SHA-2 family—of which <span class="sha">SHA-256</span> is the \(256\)-bit member—was standardized
+in 2002 with longer digests and a reworked, more conservative round
+function.</p>
+
+<p>Then the towers fell, in order of age. In 2005 Wang and Yu exhibited
+explicit collisions in MD5 by hand-crafted differential
+analysis&nbsp;<a class="cite" href="bibliography.html#WangYu2005">(Wang and Yu, 2005)</a>; within a few years refinements produced
+colliding documents in seconds on a laptop, and forged certificates in the
+wild. The same summer, Wang, Yin, and Yu broke SHA-1’s collision
+resistance on paper, at cost \(2^{69}\) evaluations versus the \(2^{80}\)
+birthday bound&nbsp;<a class="cite" href="bibliography.html#WangYinYu2005">(Wang et al., 2005)</a>; twelve years later the attack was
+industrialized: the SHAttered project published two distinct PDF files
+with equal SHA-1 hashes, at a cost of roughly \(2^{63}\) evaluations—about
+6,500 CPU-years plus 100 GPU-years, real but affordable for a
+well-resourced organization&nbsp;<a class="cite" href="bibliography.html#Stevens2017">(Stevens et al., 2017)</a>. Git, which had bet its
+object model on SHA-1, began a still-ongoing migration to <span class="sha">SHA-256</span>.</p>
+
+<p>Two lessons, both load-bearing for this paper. First, <em>the choice of
+algorithm matters enormously</em>: MD5, SHA-1, and <span class="sha">SHA-256</span> look like
+siblings—the same iterated-compression skeleton, the same diet of
+\(32\)-bit additions, rotations, and Boolean operations—yet differential
+cryptanalysis (anatomized in <a class="xref" href="07-differential.html#sec:differential">§7</a>) shattered the first
+two while <span class="sha">SHA-256</span>, attacked by the same schools with the same tools for
+twenty years, has not visibly moved
+(current state of the art in <a class="xref" href="06-frameworks.html#sec:frameworks">§6</a> and <a class="xref" href="07-differential.html#sec:siege">§7.4</a>). Whatever separates
+broken from unbroken here is not the general species of design; it lives
+in the fine structure of round counts, rotation offsets, and message
+scheduling—quantitative differences producing a qualitative divide, and
+nobody can currently compute, from the specification alone, which side of
+the divide a design falls on. Second, breaks are not black swans; they are
+the <em>normal</em> fate of these objects, which makes <span class="sha">SHA-256</span>’s quarter
+century of stability a phenomenon in want of explanation rather than a
+default to be assumed.</p>
+
+<h2 id="sec:epistemology">2.4&ensp;The epistemological situation <a class="pdf-ref" href="kng256.pdf#page=9">PDF p. 9</a></h2>
+
+<p>How do we know what we know about <span class="sha">SHA-256</span>? Not the way we know things about
+the Josephus function. There is no theorem asserting any of the properties
+in <a class="xref" href="#sec:uses">§2.1</a>; as we will see in <a class="xref" href="06-frameworks.html#sec:frameworks">§6</a>, for a fixed
+unkeyed function it is delicate even to <em>state</em> them. What exists
+instead is a corpus of observations: a published specification, a fossil
+record of broken relatives (<a class="xref" href="#sec:falling">§2.3</a>), a large literature of
+failed and partially successful attacks on weakened versions, and an
+industrial base exercising the function at cosmological rates without
+surfacing an anomaly.</p>
+
+<p>This is the epistemic posture of a <em>naturalist</em>, not an axiomatist:
+we know <span class="sha">SHA-256</span> the way nineteenth-century biology knew a species—by
+morphology, habitat, behavior under stress, and comparison with extinct
+relatives. The cryptographic literature has even formalized the ignorance:
+Rogaway’s “human ignorance” framework&nbsp;<a class="cite" href="bibliography.html#Rogaway2006">(Rogaway, 2006)</a> proves
+theorems of the form “any explicit method for breaking protocol \(P\)
+yields an explicit collision in <span class="sha">SHA-256</span>”—transferring trust not from an
+axiom but from the observed, decades-long failure of a very motivated
+species to produce such a collision. It is Popperian science embedded
+inside pure mathematics: the conjecture “<span class="sha">SHA-256</span> has no exploitable
+structure” is falsifiable, massively tested, and unproven.</p>
+
+<p>The rest of this paper takes the naturalist’s program seriously and asks
+what a <em>quantitative</em> natural history of this object would look like:
+first the anatomy (<a class="xref" href="03-geometry.html#sec:geometry">§3</a>), then the field measurements one
+can actually take, where work of Flajolet supplies exactly the right
+instrument (<a class="xref" href="04-random-maps.html#sec:randommaps">§4</a>), then the existing theoretical
+frameworks and the genuine gap between them (<a class="xref" href="06-frameworks.html#sec:frameworks">§6</a>).</p>
+
+<section class="footnotes">
+<ol>
+<li id="fn1">“No secrets” means
+no secret <em>inputs</em>; it emphatically does not mean no design
+intelligence. Every constant and structural parameter was chosen with
+visible care, by a designer—the NSA—demonstrably in possession of
+nonpublic cryptanalytic knowledge. The clearest episode: NIST published
+the family’s ancestor, now called SHA-0, in 1993; within two years the
+NSA had it withdrawn, citing an undisclosed weakness, and reissued with
+exactly one change, a single one-bit rotation added to the message
+schedule&nbsp;<a class="cite" href="bibliography.html#FIPS180-1">(National Institute of Standards and Technology, 1995)</a>. In 1998 academic cryptanalysis independently
+discovered a differential collision attack on SHA-0 that this tweak
+happens to block&nbsp;<a class="cite" href="bibliography.html#ChabaudJoux1998">(Chabaud and Joux, 1998)</a>, and by 2005 explicit SHA-0
+collisions had been computed&nbsp;<a class="cite" href="bibliography.html#BihamChen2005">(Biham et al., 2005)</a>, while the amended
+SHA-1 stood for another decade (<a class="xref" href="#sec:falling">§2.3</a>). Whatever process
+selects these functions, it is not simple random choice; <a class="xref" href="03-geometry.html#sec:nums">§3.6</a>
+discusses how the SHA-2 generation made its constants auditable in
+response to exactly this kind of asymmetry. <a href="#fnref1">↩</a></li>
+</ol>
+</section>
+
+<div id="pagenav"></div>
+</main>
+</div>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="assets/site.js"></script>
+<script defer src="assets/viz.js"></script>
+</body>
+</html>

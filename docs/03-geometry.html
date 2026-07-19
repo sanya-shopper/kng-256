@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>§3 · Anatomy: a self-map of a finite space — SHA-256 as a Mathematical Object</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="03-geometry.html">
+<div class="layout">
+<nav id="sidebar"></nav>
+<main id="content">
+<header class="page-head">
+  <p class="doc-title"><a href="index.html">SHA-256 as a Mathematical Object</a></p>
+</header>
+
+<h1 id="sec:geometry">§3&ensp;Anatomy: a self-map of a finite space <a class="pdf-ref" href="kng256.pdf#page=10" title="Open this section in the PDF">PDF&nbsp;p.&nbsp;10</a></h1>
+
+<p>We now open the organism. The dissection has two stages, and only the
+second is specific to <span class="sha">SHA-256</span>: first a completely general—and genuinely
+theoretical—reduction of “hash anything” to “iterate one map on a
+finite space”; then the finite space itself and the map that <span class="sha">SHA-256</span>
+iterates on it.</p>
+
+<h2 id="sec:merkledamgard">3.1&ensp;From arbitrary bit strings to one finite map <a class="pdf-ref" href="kng256.pdf#page=10">PDF p. 10</a></h2>
+
+<p>A function on \(\bigcup_{\ell &lt; 2^{64}} \bitstrings^\ell\) looks
+unwieldy—its domain is (for practical purposes) infinite and
+ragged. The first structural fact about <span class="sha">SHA-256</span> is that all of this
+unwieldiness is handled by a single, provably safe reduction, the
+<em>Merkle–Damgård construction</em>, and that everything interesting
+then happens on a finite set.</p>
+
+<h3 class="runin">Padding.</h3>
+
+<p>A message \(m\) of bit length \(\ell\) (any \(\ell\),
+including \(0\); bits, not bytes) is padded by appending a single
+\(\mathsf{1}\) bit, then the minimum number of \(\mathsf{0}\) bits, then the
+number \(\ell\) written as a \(64\)-bit integer, so that the total length is a
+multiple of \(512\). The padded message splits into \(512\)-bit blocks
+\(m_1, \dots, m_k\) (<a class="xref" href="#fig:padding">Figure 2</a>). Padding is where “arbitrary bit
+length” lives: the map
+\[
+  \mathrm{pad} : \bigcup_{\ell &lt; 2^{64}} \bitstrings^{\ell}
+  \;\longrightarrow\; \bigl(\bitstrings^{512}\bigr)^{+}
+\]
+is injective (the appended \(\mathsf{1}\) and the length field between them
+guarantee it), and encoding the <em>length</em> in the final block—so-called
+Merkle–Damgård strengthening—is not bookkeeping but the hypothesis
+that makes <a class="xref" href="#thm:md">Theorem 3.1</a> below true.</p>
+
+<figure class="static-figure" id="fig:padding">
+<svg viewBox="0 0 760 262" role="img" aria-label="Padding and blocking diagram: a linear message split into 512-bit blocks, the final block completed by a 1 bit, zeros, and the 64-bit length field" style="max-width:760px;width:100%;height:auto;display:block;margin:0 auto" font-family="sans-serif" font-size="14">
+  <defs>
+    <marker id="arr-pad" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--ink)"/>
+    </marker>
+  </defs>
+  <!-- linear message -->
+  <rect x="15" y="20" width="497" height="32" fill="#d5e5f5" stroke="var(--ink-secondary)"/>
+  <line x1="218.5" y1="20" x2="218.5" y2="52" stroke="var(--ink-secondary)"/>
+  <line x1="422" y1="20" x2="422" y2="52" stroke="var(--ink-secondary)"/>
+  <text x="117" y="41" text-anchor="middle">A</text>
+  <text x="320" y="41" text-anchor="middle">B</text>
+  <text x="467" y="41" text-anchor="middle">C</text>
+  <text x="522" y="41" font-size="13">message <tspan font-style="italic">m</tspan>, <tspan font-style="italic">ℓ</tspan> bits</text>
+  <!-- guide lines -->
+  <line x1="15" y1="52" x2="15" y2="167" stroke="#999" stroke-dasharray="4 3"/>
+  <line x1="218.5" y1="52" x2="232" y2="167" stroke="#999" stroke-dasharray="4 3"/>
+  <line x1="422" y1="52" x2="449.5" y2="167" stroke="#999" stroke-dasharray="4 3"/>
+  <line x1="512" y1="52" x2="539" y2="167" stroke="#999" stroke-dasharray="4 3"/>
+  <!-- annotations -->
+  <text x="420" y="84" text-anchor="middle" font-size="12">single pad bit <tspan font-weight="bold">1</tspan></text>
+  <text x="420" y="97" text-anchor="middle" font-size="9.5">(mandatory: exactly one, always</text>
+  <text x="420" y="108" text-anchor="middle" font-size="9.5">present, marks end of message)</text>
+  <path d="M 435 114 C 470 140, 510 155, 533 163" fill="none" stroke="var(--ink-secondary)" marker-end="url(#arr-pad)"/>
+  <text x="618" y="124" text-anchor="middle" font-size="12">zero fill</text>
+  <text x="618" y="138" text-anchor="middle" font-size="9.5">(<tspan font-style="italic">k</tspan> zeros, 0 ≤ <tspan font-style="italic">k</tspan> ≤ 511; <tspan font-style="italic">possibly none</tspan>)</text>
+  <path d="M 592 144 L 583 163" fill="none" stroke="var(--ink-secondary)" marker-end="url(#arr-pad)"/>
+  <!-- 512-bit blocks -->
+  <rect x="15" y="168" width="203.5" height="32" fill="#d5e5f5" stroke="var(--ink-secondary)"/>
+  <rect x="232" y="168" width="203.5" height="32" fill="#d5e5f5" stroke="var(--ink-secondary)"/>
+  <text x="117" y="189" text-anchor="middle">A</text>
+  <text x="334" y="189" text-anchor="middle">B</text>
+  <!-- final block: tail of m | pad bit 1 | zeros | length -->
+  <rect x="449.5" y="168" width="74.25" height="32" fill="#d5e5f5" stroke="var(--ink-secondary)"/>
+  <rect x="523.75" y="168" width="27.5" height="32" fill="#c6e0b4" stroke="var(--ink-secondary)"/>
+  <rect x="551.25" y="168" width="60.5" height="32" fill="#ffffff" stroke="var(--ink-secondary)"/>
+  <rect x="611.75" y="168" width="41.25" height="32" fill="#fae0bc" stroke="var(--ink-secondary)"/>
+  <rect x="449.5" y="168" width="203.5" height="32" fill="none" stroke="var(--ink-secondary)"/>
+  <text x="486" y="189" text-anchor="middle">C</text>
+  <text x="537.5" y="189" text-anchor="middle" font-weight="bold">1</text>
+  <text x="581.5" y="189" text-anchor="middle" font-size="12">0⋯0</text>
+  <text x="632" y="189" text-anchor="middle" font-size="12">⟨<tspan font-style="italic">ℓ</tspan>⟩</text>
+  <!-- block names and sizes -->
+  <text x="117" y="221" text-anchor="middle" font-style="italic">m<tspan dy="4" font-size="10">1</tspan></text>
+  <text x="334" y="221" text-anchor="middle" font-style="italic">m<tspan dy="4" font-size="10">2</tspan></text>
+  <text x="532" y="221" text-anchor="middle" font-style="italic">m<tspan dy="4" font-size="10">3</tspan></text>
+  <path d="M 15 228 L 15 234 L 218.5 234 L 218.5 228" fill="none" stroke="var(--ink-secondary)"/>
+  <text x="117" y="251" text-anchor="middle" font-size="10.5">512 bits</text>
+  <path d="M 611.75 205 L 611.75 211 L 653 211 L 653 205" fill="none" stroke="var(--ink-secondary)"/>
+  <text x="659" y="224" text-anchor="end" font-size="10">64 bits:</text>
+  <text x="666" y="236" text-anchor="end" font-size="10">bit length <tspan font-style="italic">ℓ</tspan></text>
+</svg>
+<figcaption><strong>Figure 2.</strong> Padding and blocking, for a message needing \(k=3\) blocks. The
+linear message (blue; portions <span class="sf">A</span>, <span class="sf">B</span>, <span class="sf">C</span>)
+is consumed left to right by \(512\)-bit blocks. The final block is
+completed by a single \(\mathsf{1}\) bit (green), a run of \(\mathsf{0}\)s,
+and the \(64\)-bit binary encoding of the message length \(\ell\)
+(orange)—the Merkle–Damgård strengthening. The rule is exact and
+admits no options: to a message of \(\ell\) bits one <em>always</em> appends
+one \(\mathsf{1}\), then the fewest \(\mathsf{0}\)s (possibly none) so that
+the total reaches a multiple of \(512\) once the \(64\)-bit length is
+affixed—i.e.&nbsp;\(k\) is the least \(\ge 0\) solution of
+\(\ell + 1 + k + 64 \equiv 0 \pmod{512}\). The \(\mathsf{1}\) bit and the
+length field are never omitted; only the zero-count \(k\) depends on
+\(\ell\), and if the tail <span class="sf">C</span> leaves no room for the \(65\) closing
+bits, \(k\) simply runs on into an extra all-padding block.
+<a class="pdf-ref" href="kng256.pdf#page=11">PDF p. 11</a></figcaption>
+</figure>
+
+<h3 class="runin">Chaining.</h3>
+
+<p>All real work is delegated to one
+<em>compression function</em>
+\[
+  f : \State \times \bitstrings^{512} \longrightarrow \State,
+  \qquad \State = (\Ztwo)^8 ,
+\]
+which eats a \(512\)-bit block and updates a point of the finite space
+\(\State\) (about which everything in <a class="xref" href="#sec:statespace">§3.2</a>). Fix a public
+starting point \(h_0 = \mathrm{IV} \in \State\) and set
+\[
+  h_i = f(h_{i-1}, m_i), \qquad \SHA(m) = h_k ,
+\]
+reading the final state out as \(256\) bits (<a class="xref" href="#fig:md">Figure 3</a>).</p>
+
+<figure class="static-figure" id="fig:md">
+<svg viewBox="0 0 700 200" role="img" aria-label="Merkle–Damgård chain: IV feeds into a sequence of compression-function boxes, each also fed by a message block, ending in the digest" style="max-width:700px;width:100%;height:auto;display:block;margin:0 auto" font-family="sans-serif" font-size="14">
+  <defs>
+    <marker id="arr-md" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--ink)"/>
+    </marker>
+  </defs>
+  <!-- annotation above m_k -->
+  <text x="440" y="12" text-anchor="middle" font-size="10">last block contains</text>
+  <text x="440" y="24" text-anchor="middle" font-size="10">the bit length <tspan font-style="italic">ℓ</tspan></text>
+  <!-- message blocks -->
+  <rect x="92" y="30" width="56" height="30" fill="#ffffff" stroke="var(--ink-secondary)"/>
+  <text x="120" y="50" text-anchor="middle" font-style="italic">m<tspan dy="4" font-size="10">1</tspan></text>
+  <rect x="212" y="30" width="56" height="30" fill="#ffffff" stroke="var(--ink-secondary)"/>
+  <text x="240" y="50" text-anchor="middle" font-style="italic">m<tspan dy="4" font-size="10">2</tspan></text>
+  <rect x="412" y="30" width="56" height="30" fill="#ececec" stroke="var(--ink-secondary)"/>
+  <text x="440" y="50" text-anchor="middle" font-style="italic">m<tspan dy="4" font-size="10">k</tspan></text>
+  <!-- f boxes -->
+  <rect x="102" y="112" width="36" height="36" fill="var(--projfill)" stroke="var(--ink-secondary)"/>
+  <text x="120" y="135" text-anchor="middle" font-style="italic">f</text>
+  <rect x="222" y="112" width="36" height="36" fill="var(--projfill)" stroke="var(--ink-secondary)"/>
+  <text x="240" y="135" text-anchor="middle" font-style="italic">f</text>
+  <text x="330" y="135" text-anchor="middle">⋯</text>
+  <rect x="422" y="112" width="36" height="36" fill="var(--projfill)" stroke="var(--ink-secondary)"/>
+  <text x="440" y="135" text-anchor="middle" font-style="italic">f</text>
+  <!-- block-to-f arrows -->
+  <line x1="120" y1="60" x2="120" y2="109" stroke="var(--ink-secondary)" marker-end="url(#arr-md)"/>
+  <line x1="240" y1="60" x2="240" y2="109" stroke="var(--ink-secondary)" marker-end="url(#arr-md)"/>
+  <line x1="440" y1="60" x2="440" y2="109" stroke="var(--ink-secondary)" marker-end="url(#arr-md)"/>
+  <!-- chain arrows -->
+  <text x="52" y="135" text-anchor="middle">IV</text>
+  <line x1="66" y1="130" x2="99" y2="130" stroke="var(--ink-secondary)" marker-end="url(#arr-md)"/>
+  <line x1="138" y1="130" x2="219" y2="130" stroke="var(--ink-secondary)" marker-end="url(#arr-md)"/>
+  <text x="180" y="149" text-anchor="middle" font-size="11" font-style="italic">h<tspan dy="3" font-size="8.5">1</tspan></text>
+  <line x1="258" y1="130" x2="315" y2="130" stroke="var(--ink-secondary)" marker-end="url(#arr-md)"/>
+  <line x1="345" y1="130" x2="419" y2="130" stroke="var(--ink-secondary)" marker-end="url(#arr-md)"/>
+  <text x="383" y="149" text-anchor="middle" font-size="11" font-style="italic">h<tspan dy="3" font-size="8.5">k−1</tspan></text>
+  <line x1="458" y1="130" x2="491" y2="130" stroke="var(--ink-secondary)" marker-end="url(#arr-md)"/>
+  <text x="497" y="135" font-size="13">SHA-256(<tspan font-style="italic">m</tspan>)</text>
+</svg>
+<figcaption><strong>Figure 3.</strong> The Merkle–Damgård construction: an arbitrary-length
+message is folded through one compression function
+\(f : \State \times \bitstrings^{512} \to \State\) on the finite state
+space \(\State = (\Ztwo)^8\).
+<a class="pdf-ref" href="kng256.pdf#page=11">PDF p. 11</a></figcaption>
+</figure>
+
+<p>This is not an ad hoc recipe; it is a construction with a theorem, proved
+independently in 1989 by Damgård—stated and proved as Theorem&nbsp;3.1
+of&nbsp;Damgård <a class="cite" href="bibliography.html#Damgard1989">(1990, pp. 419–420)</a>—and by Merkle, under the name
+“meta-method,” in&nbsp;Merkle <a class="cite" href="bibliography.html#MerkleOWHF1989">(1990b)</a>. Both original papers are
+short, readable, and archived alongside this note; the theorem is exactly
+why the design has been reused by MD5, SHA-1, and SHA-2 alike:</p>
+
+<div class="thmbox theorem" id="thm:md">
+  <p><span class="thm-head">Theorem 3.1 (Merkle, Damgård).</span> Any collision of the iterated hash yields, constructively, a collision of
+the compression function: from \(m \ne m'\) with \(\SHA(m) = \SHA(m')\) one
+can extract \((h, b) \ne (h', b')\) with \(f(h,b) = f(h',b')\).</p>
+</div>
+
+<div class="proof"><p><em>Proof idea.</em> Walk the two chains backward from the equal outputs. If the messages have
+different lengths, the final blocks already differ (they encode the
+lengths—this is where strengthening is used) yet map to the same output:
+a collision in \(f\). If the lengths agree, compare positions from the end;
+at the last position where the inputs to \(f\) differ, the outputs agree,
+again a collision in \(f\). <span class="qed">∎</span></p></div>
+
+<p>The moral: <em>the arbitrary-length-input problem reduces, with proof,
+to the study of one map on one finite space</em>. (The domain is itself
+finite—every allowed input is shorter than \(2^{64}\) bits—but its
+inputs run through unboundedly many <em>lengths</em>, and it is that
+length-variability, not any actual infinity, that the construction tames.)
+The reduction is airtight only for
+collision resistance—the construction leaks other structure, such as the
+famous length-extension property (from the digest \(H(m)\) alone, without
+knowing \(m\), one can compute \(H(m \Vert \mathrm{pad} \Vert m')\); defined
+and dissected in <a class="xref" href="06-frameworks.html#sec:models">§6.2</a>), whose repair spawned its own theory
+(indifferentiability) and whose avoidance shaped
+the post-2000 designs, including the sponge construction underlying
+SHA-3 <a class="cite" href="bibliography.html#BDPV2007">(Bertoni et al., 2007)</a>. But it means the rest of this paper may honestly
+focus on the finite object \(f\).</p>
+
+<h2 id="sec:statespace">3.2&ensp;The state space and its two rival geometries <a class="pdf-ref" href="kng256.pdf#page=12">PDF p. 12</a></h2>
+
+<p>The state space is
+\[
+  \State \;=\; (\Ztwo)^{8},
+  \qquad |\State| = 2^{256} :
+\]
+an \(8\)-dimensional module-like array of \(32\)-bit words—the
+“\(8{\times}32\)” geometry in which the entire life of <span class="sha">SHA-256</span> unfolds. As
+a plain set, \(\State\) is also \(\Ftwo^{256}\), a \(256\)-dimensional vector
+space over the two-element field. Everything hinges on the fact that
+<em>the same underlying set carries two incompatible abelian group
+structures</em>, both used incessantly:</p>
+<ul>
+  <li>bitwise addition \(\shaxor\) (exclusive or): the \(\Ftwo\)-vector
+  space structure of \(\Ftwo^{256}\);</li>
+  <li>wordwise addition \(\shaplus\) modulo \(2^{32}\): the product group
+  structure of \((\Ztwo)^8\), where carries propagate within each word.</li>
+</ul>
+<p>These two structures share the zero element and almost nothing else. A map
+that is linear for \(\shaxor\) (a matrix over \(\Ftwo\)) is, generically,
+maximally nonlinear from the point of view of \(\shaplus\), and vice versa;
+the carry chains of integer addition are precisely the terms that
+\(\Ftwo\)-linear algebra cannot see.</p>
+
+<p>It helps to picture the additive (\(\shaplus\)) structure literally, as a
+clock (<a class="xref" href="#fig:odometer">Figure 4</a>). Read the state as an odometer counting
+modulo \(2^{256}\): every modular addition advances the needle by some
+amount, and the crucial event is whether it <em>wraps</em> past \(0\)—an
+overflow, a carry out of the top, thrown away by the reduction. That one
+bit of “did it go around?” is exactly what \(\shaxor\)-algebra is blind to
+and what the \(2\)-adic metric, next, is built to record.</p>
+
+<figure class="viz-figure" id="fig:odometer">
+  <div class="viz" id="viz-odometer"></div>
+  <figcaption><strong>Figure 4.</strong> Wordwise addition \(\shaplus\) as motion on a clock. As an
+odometer counting mod \(2^{256}\), the state advances by each addition;
+it <em>wraps</em> past \(0\) exactly when the sum overflows—a carry out of
+the top bit, discarded by the reduction. Whether a given addition wraps
+is invisible to \(\Ftwo\)-linear (\(\shaxor\)) algebra and is precisely the
+information the \(2\)-adic metric records. (The true state is not one
+circle of \(2^{256}\) positions but eight <em>coupled</em> clocks of
+\(2^{32}\) each, \((\Ztwo)^8\): the single odometer is the intuition, the
+product of eight is the reality.) A round is a great many such
+additions, and iterating <span class="sha">SHA-256</span> (<a class="xref" href="05-iterated.html#sec:iterated">§5</a>) sends the counter
+wandering—sometimes around the circle, sometimes not.
+<a class="pdf-ref" href="kng256.pdf#page=13">static version: PDF p. 13</a></figcaption>
+</figure>
+
+<p>There is a third, more analytic way to say this, and it is the one we
+expect resonates with a \(p\)-adic sensibility. Identify \(\Ztwo\) with the
+quotient \(\mathbb{Z}_2 / 2^{32}\mathbb{Z}_2\) of the \(2\)-adic integers.
+Then the basic machine operations sort themselves by how they treat the
+\(2\)-adic metric (in which two integers are close when they agree in many
+low-order bits):</p>
+
+<table class="paper-table">
+  <thead>
+    <tr><th>operation</th><th>\(\Ftwo\)-linear?</th><th>\(2\)-adically \(1\)-Lipschitz?</th><th>where it is “tame”</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>\(x \shaxor c\), bitwise \(\wedge,\vee,\lnot\)</td><td>yes (\(\shaxor\)) / no</td><td>yes</td><td>both lenses see it</td></tr>
+    <tr><td>\(x \shaplus c\), \(x \shaplus y\)</td><td>no</td><td>yes</td><td>only the \(2\)-adic lens</td></tr>
+    <tr><td>rotation \(x \lll r\), shift \(x \gg s\)</td><td>yes</td><td>no</td><td>only the \(\Ftwo\) lens</td></tr>
+  </tbody>
+</table>
+
+<p>Bitwise logic and modular addition are <em>\(1\)-Lipschitz</em> (\(2\)-adically
+continuous in the strongest sense: output bit \(i\) depends only on input
+bits \(0,\dots,i\), the triangular or “causal” maps); compositions of
+these are the <em>T-functions</em> of Klimov and
+Shamir <a class="cite" href="bibliography.html#KlimovShamir2003">(Klimov and Shamir, 2003)</a>, and there is a genuine ergodic theory,
+due to Anashin, characterizing when such maps act
+measure-preservingly or ergodically on \(\mathbb{Z}_2\) <a class="cite" href="bibliography.html#Anashin2006">(Anashin, 2006)</a>.
+Rotations, by contrast, are \(\Ftwo\)-linear but violently discontinuous
+\(2\)-adically: they let high-order bits influence low-order ones.</p>
+
+<p>The \(2\)-adic lens is not an ad hoc bookkeeping device; it opens onto a
+genuine subject. Nonarchimedean dynamics—the iteration theory of
+self-maps of \(p\)-adic disks, opened up by Lubin <a class="cite" href="bibliography.html#Lubin1994">(1994)</a>—asks
+exactly this paper's kind of question one level of structure up: when
+must the iteration of a \(p\)-adic map secretly respect algebraic
+structure? Lubin's paper records a suspicion of exactly the Josephus
+flavor—that a noninvertible series commuting with an invertible
+nontorsion one must have a formal group hidden behind it—and its main
+result makes a sharp instance of that suspicion into a theorem
+(<a class="cite" href="bibliography.html#Lubin1994">Lubin, 1994</a>, Main Theorem&nbsp;6.3):</p>
+
+<div class="thmbox theorem" id="thm:lubin">
+  <p><span class="thm-head">Theorem 3.2 (Lubin).</span> Let \(o\) be the ring of integers in a finite extension of \(\mathbb{Q}_p\),
+with maximal ideal \(\mathfrak m\), and let \(u, f \in o[[x]]\) be power
+series fixing \(0\), with \(u\) <em>invertible</em> (its linear coefficient
+\(u'(0)\) a unit) and \(f\) <em>noninvertible</em> (\(f'(0)\in\mathfrak m\)) of
+finite Weierstrass degree \(\delta\)—the number of zeros \(f\) has in the
+open disk, counted with multiplicity. If \(u\) and \(f\) commute,
+\(u\circ f = f\circ u\), then <em>either</em> some iterate of \(u\) is the
+identity series (\(u\) is a root of unity in the group of invertible
+series) <em>or</em> \(\delta = p^{d}\) for some \(d\ge 1\).</p>
+</div>
+
+<p>The content is rigidity. The only Weierstrass degrees a noninvertible
+map may carry while sharing its orbits with a genuine (nontorsion)
+invertible symmetry are the powers of \(p\)—and those are precisely the
+degrees of the endomorphisms of a one-dimensional formal group. So bare
+commutation, a purely dynamical hypothesis with no algebra in it, already
+forces the numerical signature of a formal-group skeleton; whether the
+skeleton can ever be truly absent is Lubin's own still-open question.</p>
+
+<p>The phenomenon is visible in miniature over our own ring \(\mathbb{Z}_2\)
+(\(p=2\)). The noninvertible \(f(x) = 4x + x^{2}\)—linear coefficient
+\(4\in 2\mathbb{Z}_2\), Weierstrass degree \(2 = 2^{1}\), a \(p\)-power on the
+nose—commutes with the invertible \(u(x) = 9x + 6x^{2} + x^{3}\) (unit
+linear coefficient \(9\)), as one checks by expanding
+\(u\circ f = f\circ u\) directly. The companion Corollary&nbsp;3.2.1 of the same
+paper is just as concrete: every zero of \(f'\) inside the disk must be a
+zero of some iterate of \(f\). Here \(f'(x) = 2x + 4\) vanishes at \(x=-2\),
+and indeed \(f(f(-2)) = f(-4) = 0\). Two lines of arithmetic thus exhibit a
+symmetry (\(u\)), a forced degree (\(2^{1}\)), and a forced coincidence among
+the iterates—structure precipitating out of commutation alone, the
+Josephus moral in \(p\)-adic dress.</p>
+
+<p>How near does this reach <span class="sha">SHA-256</span>? Adjacent, honestly, not overhead.
+<a class="xref" href="#thm:lubin">Theorem 3.2</a> governs <em>analytic</em> series on the \(p\)-adic disk,
+whereas <span class="sha">SHA-256</span>'s ARX pieces are merely \(1\)-Lipschitz T-functions—the
+coarse, non-analytic relatives tabulated above—so the theorem does not
+bind the function on the nose, and Anashin's ergodic theory is what
+survives at that lower regularity <a class="cite" href="bibliography.html#Anashin2006">(Anashin, 2006</a>; <a class="cite" href="bibliography.html#KlimovShamir2003">Klimov and Shamir, 2003)</a>.
+What <em>does</em> transfer is the question and its shape: does any
+nontrivial map commute with a (reduced, word-narrowed) <span class="sha">SHA-256</span> component,
+and if one did, would it drag in hidden algebraic structure the way it
+must for analytic series? At toy scale that is a finite, machine-checkable
+hunt—search for a commuting symmetry; find none, and the absence is
+itself a measurement of structurelessness. In this language <span class="sha">SHA-256</span>'s
+designers are in the business of manufacturing \(1\)-Lipschitz dynamics
+that commute with nothing and hide no formal group, and <a class="xref" href="#thm:lubin">Theorem 3.2</a>
+is the evidence that, one regularity class up, such structurelessness is
+genuinely hard to achieve by accident.</p>
+
+<p>This paper's distribution runs a first leg of that hunt
+(<code>tools/centralizer_census.py</code>: a few hundred lines of stdlib
+Python, about ten seconds of computation, self-testing against
+brute-force enumeration on small domains before reporting anything;
+the full listing, with a guide to its five movements, is
+<a class="xref" href="kng256.pdf#page=61">Appendix B (PDF p. 61)</a>). Narrow every
+word to \(w = 8\) bits—rotation amounts reduced mod \(8\), round constants
+cut to their leading bytes—and each component becomes a self-map of
+\(256\) points on which every centralizer question is exactly decidable.
+For a permutation, the number of commuting self-maps is a cycle-type
+computation; for a non-bijection it is a count of endomorphisms of the
+functional graph, obtained by dynamic programming; and three structured
+symmetry classes are small enough to enumerate outright: the
+translations \(x \shaplus c\), the xor-translations \(x \shaxor c\), and
+the \(2^{16}\) affine-circulant maps \(x \mapsto L(x) \shaxor c\) with \(L\)
+an xor of rotations. Calibrated against \(10^{4}\) uniform random
+permutations of \(256\) points—whose centralizer in \(\mathrm{Sym}(256)\)
+has median size about \(10^{6.8}\), the central \(90\%\) of the
+distribution spanning \(10^{3.8}\) to \(10^{10.3}\)—the census sorts
+<span class="sha">SHA-256</span>'s pieces into three regimes (<a class="xref" href="#tab:census">Table 1</a>).</p>
+
+<figure class="table-figure" id="tab:census">
+<table class="paper-table">
+  <thead>
+    <tr><th>narrowed map (\(w = 8\))</th><th>cycle type</th><th>\(|C_{\mathrm{Sym}}|\)</th><th>pct.</th><th>struct.</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>\(\Sigma_0\)</td><td>\(1^{2}\,2^{1}\,4^{3}\,8^{30}\)</td><td>\(5.0\times10^{62}\)</td><td>\(100\)</td><td>\(512\)</td></tr>
+    <tr><td>\(\Sigma_1\)</td><td>\(1^{8}\,2^{28}\,4^{48}\)</td><td>\(3.2\times10^{132}\)</td><td>\(100\)</td><td>\(2048\)</td></tr>
+    <tr><td>\(\sigma_0\)</td><td>\(1^{1}\,3^{1}\,6^{2}\,12^{20}\)</td><td>\(2.0\times10^{42}\)</td><td>\(100\)</td><td>\(2\)</td></tr>
+    <tr><td>\(x \shaplus \mathtt{b5}\)</td><td>\(256^{1}\)</td><td>\(256\)</td><td>\(0\)</td><td>\(2\)</td></tr>
+    <tr><td>\(\Sigma_0(x \shaplus \mathtt{b5})\)</td><td>\(1^{2}\,4^{1}\,5^{1}\,7^{1}\,11^{1}\,31^{1}\,62^{1}\,134^{1}\)</td><td>\(7.9\times10^{8}\)</td><td>\(84\)</td><td>\(3\)</td></tr>
+    <tr><td>\(\Sigma_1(\,\cdot \shaplus \mathtt{71})\) of prev.</td><td>\(1^{1}\,2^{1}\,3^{1}\,21^{1}\,54^{1}\,175^{1}\)</td><td>\(1.2\times10^{6}\)</td><td>\(36\)</td><td>\(2\)</td></tr>
+  </tbody>
+</table>
+<figcaption><strong>Table 1.</strong> The \(w=8\) centralizer census
+(<code>tools/centralizer_census.py</code>, listed in
+<a class="xref" href="kng256.pdf#page=61">Appendix B (PDF p. 61)</a>). \(|C_{\mathrm{Sym}}|\) is the
+exact number of permutations of the \(256\)-point word space commuting
+with the map, computed from the cycle type; “pct.”&nbsp;its percentile
+among \(10^{4}\) uniform random permutations (\(100\) and \(0\) mean beyond
+every sample); “struct.”&nbsp;the number of commuting affine-circulant
+maps \(x \mapsto L(x) \shaxor c\) out of \(2^{16}\) candidates. Beyond
+the identity, the structured survivors in the last four rows are only
+the map's own powers (\(x \shaxor \mathtt{80} = x \shaplus 128\) for
+the odometer) and the constant map at each fixed point—symmetries
+every map carries for free.
+<a class="pdf-ref" href="kng256.pdf#page=15">PDF p. 15</a></figcaption>
+</figure>
+
+<p>The linear diffusion pieces are wildly over-symmetric. Narrowed
+\(\Sigma_0\) has order \(8\) and cycle type \(1^{2} 2^{1} 4^{3} 8^{30}\)
+(every length a power of \(2\)), a centralizer of \(5.0\times10^{62}\)
+permutations, and its full linear commutant is exactly the \(256\)
+xors-of-rotations; narrowed \(\Sigma_1\) is weaker still (order \(4\), a
+\(2^{22}\)-element linear commutant)—a reminder that narrowing
+conventions carry arithmetic content, since the genuine \(32\)-bit maps
+have orders \(32\) and \(16\) (<a class="xref" href="#sec:rivest">§3.5</a>). The bare odometer
+\(x \shaplus \mathtt{0xb5}\) errs in the opposite direction: a single
+\(256\)-cycle whose commutant is exactly its own \(256\) powers, smaller
+than every one of the \(10^{4}\) random samples. And a single ARX
+alternation, \(\Sigma_0(x \shaplus \mathtt{0xb5})\), already lands inside
+the random band: centralizer \(7.9\times10^{8}\) (\(84\)th percentile),
+and its only structured symmetries are the identity and the constant
+map at each of its two fixed points—precisely the accidental
+symmetries a random permutation carries (the same census on \(200\)
+random permutations finds \(1.2\) of them on average, from the
+Poisson-distributed fixed points). A second alternation sits at the
+\(36\)th percentile. Two moves, one from each algebra, suffice to make
+an \(8\)-bit component statistically indistinguishable, by this
+instrument, from a random permutation; the sixty-four rounds of an
+actual compression call (<a class="xref" href="#sec:roundshape">§3.3</a>) are, on this evidence,
+enormous margin. (The two narrowed components that fail to be
+bijections tell a coarser story: narrowed \(\sigma_1\) has rank \(6\) and
+\(7.6\times10^{140}\) commuting self-maps, a Ch-based nonlinearity
+\(1.4\times10^{84}\) against a random-map median of \(10^{51}\)—but for
+non-bijections this count is dominated by collapsing endomorphisms and
+measures the shape of the functional graph's trees, a theme taken up
+properly in <a class="xref" href="04-random-maps.html#sec:randommaps">§4</a>, more than any hidden algebra.)</p>
+
+<p>The Anashin half of the story is just as visible. The narrowed
+constants are odd, so \(x \shaplus \mathtt{0xb5}\) is a single
+\(2^{k}\)-cycle for every \(k\)—transitivity mod \(2^{k}\), ergodicity's
+finite shadow—and so is the emblematic Klimov–Shamir T-function
+\(x \shaplus (x^{2} \vee 5)\); the script verifies both up to \(k = 16\).
+Compose in one rotation and the ergodic hierarchy collapses to generic
+permutation statistics: over the fifteen rotation amounts,
+\(\mathrm{ROTR}^{r}(x \shaplus (x^{2} \vee 5))\) on \(\Ztwo[16]\) has
+\(12.2\) cycles on average against the random-permutation expectation
+\(\ln 2^{16} + \gamma \approx 11.7\), and mean longest-cycle fraction
+\(0.57\) against the Golomb–Dickman constant
+\(0.624\) <a class="cite" href="bibliography.html#FlajoletOdlyzko1990">(Flajolet and Odlyzko, 1990)</a>—a preview of
+<a class="xref" href="04-random-maps.html#sec:randommaps">§4</a>, where such statistics become the measuring
+instrument of choice. One scar of the substrate survives the ablation:
+fixing the input's low byte pins the rotated output's low byte to
+exactly \(128\) of its \(256\) values, where a random map would spread
+over about \(162\), because one bit—bit \(7\) of the T-function output,
+carried into the low byte by the rotation—remains frozen. Even
+after the rotation, causality leaves a measurable trace.</p>
+
+<p><span class="sha">SHA-256</span>'s round function is an <em>ARX</em> design—Addition, Rotation,
+Xor—and the table explains the acronym's cunning: each primitive is
+transparent in one geometry and wild in the other, and the design
+alternates them so that the composition is wild in both. An analyst who
+adopts \(\Ftwo\)-linear algebra kills the X's and R's but is left helpless
+against the carries; an analyst who adopts the \(2\)-adic/T-function lens
+domesticates additions and logic but is destroyed by the rotations. This
+is not an accident of <span class="sha">SHA-256</span>; it is the design principle of the whole ARX
+family. What <em>is</em> specific to <span class="sha">SHA-256</span> is the exact schedule of
+alternation, and <a class="xref" href="02-history.html#sec:falling">§2.3</a> showed how much such specifics matter.</p>
+
+<div class="project" id="project-1">
+  <div class="project-title">Project 1: Single operations under the \(2\)-adic lens</div>
+  <p>Anashin's theory gives clean criteria for when a T-function like
+  \(x \mapsto x \shaplus c\) or \(x \mapsto x \shaxor c \shaplus (x \wedge d)\)
+  is a bijection of \(\Ztwo[k]\) for all \(k\), and when its iteration visits
+  every residue (ergodicity) <a class="cite" href="bibliography.html#Anashin2006">(Anashin, 2006</a>; <a class="cite" href="bibliography.html#KlimovShamir2003">Klimov and Shamir, 2003)</a>.
+  Verify the criteria experimentally on \(8\)- and \(16\)-bit words, visualize
+  orbits, then break the hypotheses with a single rotation and measure
+  what dies. A perfect first encounter with \(p\)-adic ideas producing
+  visible, computable phenomena.
+  (<code>tools/centralizer_census.py</code>, listed in
+  <a class="xref" href="kng256.pdf#page=61">Appendix B (PDF p. 61)</a>, already runs the \(w=8\) warm-up—the
+  single-orbit checks, the rotation ablation, and the centralizer
+  census of <a class="xref" href="#tab:census">Table 1</a>—and is written to be extended.)</p>
+  <div class="project-meta"><em>Prerequisites:</em> elementary number theory; curiosity about \(p\)-adic numbers &ensp; <em>Window:</em> 3–4 weeks</div>
+</div>
+
+<h2 id="sec:roundshape">3.3&ensp;The compression function, structurally <a class="pdf-ref" href="kng256.pdf#page=16">PDF p. 16</a></h2>
+
+<p>We describe \(f\) at the level of shape; the full specification fits on two
+pages of National Institute of Standards and Technology <a class="cite" href="bibliography.html#FIPS180-4">(2015)</a> (with an accessible pseudocode rendering
+in&nbsp;<a class="cite" href="bibliography.html#WikipediaSHA2">Wikipedia contributors, 2026</a>) and is worth reading only after the shape is
+clear. The state is eight words \((a,b,c,d,e,f,g,h)\). The \(512\)-bit message
+block is first <em>expanded</em>: its sixteen words \(W_0, \dots, W_{15}\)
+are stretched to sixty-four by the recurrence
+\[
+  W_t \;=\; \sigma_1(W_{t-2}) \shaplus W_{t-7} \shaplus
+            \sigma_0(W_{t-15}) \shaplus W_{t-16},
+  \qquad 16 \le t &lt; 64,
+\]
+where \(\sigma_0, \sigma_1\) are fixed \(\shaxor\)-combinations of rotations
+and shifts of a single word (\(\Ftwo\)-linear), while the additions are
+modular (2-adic). Then sixty-four rounds are applied; round \(t\) computes
+\[
+  T_1 = h \shaplus \Sigma_1(e) \shaplus \mathrm{Ch}(e,f,g)
+          \shaplus K_t \shaplus W_t,
+  \qquad
+  T_2 = \Sigma_0(a) \shaplus \mathrm{Maj}(a,b,c),
+\]
+and shifts the state pipeline:
+\((a, \dots, h) \leftarrow
+ (T_1 \shaplus T_2,\; a,\; b,\; c,\; d \shaplus T_1,\; e,\; f,\; g)\).
+Here \(\Sigma_0, \Sigma_1\) are again xors of three rotations, and
+\[
+  \mathrm{Ch}(x,y,z) = (x \wedge y) \shaxor (\lnot x \wedge z),
+  \qquad
+  \mathrm{Maj}(x,y,z) = (x \wedge y) \shaxor (x \wedge z) \shaxor (y \wedge z)
+\]
+are bitwise Boolean functions of degree two (“choose” and “majority”).
+Finally—a crucial asymmetry called the Davies–Meyer feedforward—the
+input state is added back: the block's net effect is
+\(h \mapsto h \shaplus \tilde{f}(h, m)\), which prevents running the rounds
+backward even though each individual round is invertible. This
+feedforward is not a detail but the hinge on which one-wayness turns, and
+it is one of the two places where <span class="sha">SHA-256</span>'s architecture carries a genuine
+theorem; we return to it in <a class="xref" href="#sec:constructions">§3.4</a>.</p>
+
+<p><a class="xref" href="#fig:schedule">Figure 5</a> traces how a single block's data reaches every one of
+the sixty-four rounds. The block supplies only the first sixteen schedule
+words; the recurrence then <em>stretches</em> those seeds forward, each new
+word reaching back to four earlier ones, until all sixty-four exist—so a
+bit set in the incoming block propagates, through the schedule alone,
+into arbitrarily late rounds. Each round \(t\) then draws exactly two
+external inputs, its schedule word \(W_t\) and its constant \(K_t\), and folds
+them into the running eight-word state; everything else in the round is
+internal feedback.</p>
+
+<figure class="pdf-figure" id="fig:schedule">
+  <div class="pdf-card">Figure 5 lives in the PDF <a class="pdf-ref" href="kng256.pdf#page=17">open PDF p. 17</a></div>
+  <figcaption><strong>Figure 5.</strong> How one block's data reaches every round. The block fills only
+the sixteen seed words \(W_0,\dots,W_{15}\) (blue); the message-schedule
+recurrence then stretches them into \(W_{16},\dots,W_{63}\) (each derived
+word, shown for \(W_{16}\), built from four earlier ones via the
+\(\Ftwo\)-linear maps \(\sigma_0,\sigma_1\) and modular addition). Each of
+the \(64\) rounds \(R_t\) consumes exactly two external inputs—its
+schedule word \(W_t\) (wine) and its constant \(K_t\) (navy)—and threads
+the eight-word state through from the incoming chaining value to
+\(h_{\mathrm{out}}\). Arrows show influence: a bit of the block, via the
+schedule's reach-back, can steer arbitrarily late rounds.</figcaption>
+</figure>
+
+<p>The reach of that schedule is worth making quantitative, because it is a
+clean computed pattern rather than a hand-drawn cartoon. Trace, for each
+word \(W_t\), the set of <em>seed</em> words \(W_0,\dots,W_{15}\)—the only
+ones carrying message data—that it transitively depends on, following
+the recurrence's four back-pointers (\(t-2,\,t-7,\,t-15,\,t-16\)) down to
+the data layer. The dependency graph
+(<a class="xref" href="#fig:schedulegraph">Figure 6</a>) then answers “how fast does a block's data
+spread through the schedule?” exactly: the count of seeds reached climbs
+\(4,4,7,7,10,10,13,14,15,15,\dots\) and <em>saturates at \(W_{26}\)</em>—from
+that word on, every schedule word depends on all sixteen data words. Ten
+steps of the recurrence suffice to fully entangle the message, before a
+single one of the sixty-four rounds has done its diffusion work. The
+four coloured arc families in the figure are the four terms of the
+recurrence, and their regular weave is the schedule's linear-feedback
+skeleton laid bare; whether that visible regularity is a foothold or a
+red herring is one more question small experiments can chew on.</p>
+
+<figure class="viz-figure" id="fig:schedulegraph">
+  <div class="viz" id="viz-schedule"></div>
+  <figcaption><strong>Figure 6.</strong> The message schedule as a computed dependency graph
+(generated by <code>tools/wschedule_graph.py</code>, which also emits a
+Graphviz <code>.dot</code> version). Nodes are the \(64\) schedule words in
+index order; the sixteen data-carrying seeds \(W_0,\dots,W_{15}\) are
+blue, and derived words darken with the number of seeds they
+transitively depend on. Each of the four arc colours is one term of
+\(W_t=\sigma_1(W_{t-2})\shaplus W_{t-7}\shaplus\sigma_0(W_{t-15})\shaplus
+W_{t-16}\). The lower trace counts seeds reached versus \(t\); it reaches
+all sixteen at \(W_{26}\) (dashed line), after which the message is fully
+diffused through the schedule alone.
+<a class="pdf-ref" href="kng256.pdf#page=18">static version: PDF p. 18</a></figcaption>
+</figure>
+
+<p>One further structural reduction deserves emphasis, because it shrinks
+the apparent dimensionality of the mystery. Only two of the eight
+registers ever receive fresh values: each round computes one new word
+entering the \(a\)-position and one entering the \(e\)-position, while the
+other six merely shift along. The eight-word state is a <em>delay
+line</em>—a memoization of recent history, not eight independent degrees
+of freedom. Writing \(A_t\) and \(E_t\) for the words produced at round \(t\)
+(so that the state at that moment reads
+\((A_t, A_{t-1}, A_{t-2}, A_{t-3},\, E_t, E_{t-1}, E_{t-2}, E_{t-3})\)),
+the sixty-four rounds are exactly the coupled two-track recurrence
+\[
+\begin{aligned}
+  T_t &amp;= E_{t-4} \shaplus \Sigma_1(E_{t-1})
+        \shaplus \mathrm{Ch}(E_{t-1}, E_{t-2}, E_{t-3})
+        \shaplus K_t \shaplus W_t,\\
+  A_t &amp;= T_t \shaplus \Sigma_0(A_{t-1})
+        \shaplus \mathrm{Maj}(A_{t-1}, A_{t-2}, A_{t-3}),
+  \qquad
+  E_t \;=\; A_{t-4} \shaplus T_t,
+\end{aligned}
+\]
+with the eight initial values \(A_{-1}, \dots, A_{-4}, E_{-1}, \dots,
+E_{-4}\) read off the incoming chaining state. So the “\(8\)-dimensional”
+iteration is really a pair of scalar recurrences over \(\Ztwo\) with
+lookback four—formally a nonlinear cousin of the lagged-Fibonacci and
+linear-feedback recurrences whose theory is complete
+(<a class="xref" href="06-frameworks.html#sec:prngs">§6.6</a>)—and the cryptanalytic literature does in fact work
+in exactly this \(A/E\) form. Nothing is lost in the reduction; the honest
+shape of a round is two new words under an eight-word window of memory.</p>
+
+<p>Notice what is <em>absent</em>: no multiplications, no S-box tables, no
+number-theoretic structure—only the three ARX primitives and two
+quadratic Boolean functions, iterated \(64\) times. The function is
+degree-two nonlinearity compounded through \(64\) rounds of geometric
+whiplash between \(\Ftwo^{256}\) and \((\Ztwo)^8\). That so spare a recipe
+apparently produces a completely structureless map is the central mystery
+this paper wants to sell.</p>
+
+<figure class="viz-figure viz-extra">
+  <div class="viz" id="viz-avalanche"></div>
+  <figcaption>Live avalanche: the SHA-256 compression function computed in your browser. Flip one input bit and watch the two computations diverge, round by round. (Interactive; not in the PDF.)</figcaption>
+</figure>
+
+<h2 id="sec:constructions">3.4&ensp;Two constructions that come with proofs <a class="pdf-ref" href="kng256.pdf#page=18">PDF p. 18</a></h2>
+
+<p>It is worth pausing to locate the mystery precisely, because <span class="sha">SHA-256</span> is
+built in three nested layers and—remarkably—the two <em>outer</em>
+layers each carry a solid theorem. Only the innermost object is
+theorem-free. Naming the layers from the outside in: the
+<em>mode</em> (Merkle–Damgård iteration, <a class="xref" href="#sec:merkledamgard">§3.1</a>)
+wraps the <em>compression function</em> \(f\); the compression function is
+itself built by the <em>Davies–Meyer</em> construction around a block
+cipher \(E\); and \(E\)—the cipher SHACAL-2, which is just the round
+machinery above run as a keyed permutation—is the finite map about
+which nothing is proved. The provable security of <span class="sha">SHA-256</span> is entirely a
+statement about the two wrappers, conditional on the core behaving well.</p>
+
+<h3 class="runin">The mode: Merkle–Damgård.</h3>
+
+<p>The outer layer's theorem is
+already in hand: <a class="xref" href="#thm:md">Theorem 3.1</a> says that a collision in the full hash
+constructively yields a collision in \(f\), so <em>collision resistance
+of \(f\) is inherited by the whole function</em>—unconditionally, in the
+standard model, needing only that the final block encode the message
+length (the “strengthening” the proof consumes). This is as solid as
+theorems in this subject get: no idealization, no unproven assumption, a
+one-page reduction. What it does <em>not</em> give is equally important and
+sharply delimited—it transfers collision resistance and nothing else,
+which is exactly why length extension and the multicollision family of
+<a class="xref" href="06-frameworks.html#sec:mdstructure">§6.3</a> slip through. The mode is a theorem about one
+property, and an honest one.</p>
+
+<h3 class="runin">The compression function: Davies–Meyer.</h3>
+
+<p>The middle layer is
+the feedforward met in <a class="xref" href="#sec:roundshape">§3.3</a>. Take a block cipher
+\(E_m(h)\)—plaintext the chaining value \(h\in\State\), key the message
+block \(m\)—and set
+\[
+  f(h,m) \;=\; E_m(h) \,\shaplus\, h .
+\]
+The feedforward “\(\shaplus\,h\)” is the whole point. Without it,
+\(f = E_m\) would be a <em>permutation</em> of \(\State\) for each fixed \(m\),
+hence trivially invertible (decrypt with key \(m\)) and useless as a
+one-way compression—the same observation that, read dynamically,
+<a class="xref" href="05-iterated.html#sec:unless">§5.3</a> shows is what makes iterated <span class="sha">SHA-256</span> lose entropy at
+all. Adding the input back breaks invertibility, and does so in a way one
+can prove is optimal, provided the cipher is idealized:</p>
+
+<div class="thmbox theorem" id="thm:dm">
+  <p><span class="thm-head">Theorem 3.3 (Preneel–Govaerts–Vandewalle; Black–Rogaway–Shrimpton).</span> Model \(E\) as an <em>ideal cipher</em> (for each key an independent, uniformly
+random permutation, accessible only as a black box in both directions).
+Then the Davies–Meyer compression \(f(h,m)=E_m(h)\shaplus h\) is optimally
+collision- and preimage-resistant: any adversary asking \(q\) cipher
+queries finds a collision with probability at most \(q(q+1)/2^{n}\), and a
+preimage with probability of order \(q/2^{n}\)—matching the birthday
+bound \(2^{n/2}\) for collisions and the brute-force bound \(2^{n}\) for
+preimages, and both are tight.</p>
+</div>
+
+<p>Preneel et al. <a class="cite" href="bibliography.html#PGV1993">(1994)</a> isolated this by classifying all \(64\) natural ways to
+build a rate-one compression function from a block cipher and singling
+out the \(12\) sound ones (Davies–Meyer among them); Black et al. <a class="cite" href="bibliography.html#BRS2002">(2002)</a> then
+supplied the rigorous black-box proofs and the exact bounds quoted above.
+So the middle layer, too, has a theorem—but note the price on the
+ticket. It holds in the <em>ideal cipher model</em>, the block-cipher
+cousin of the random-oracle model of <a class="xref" href="06-frameworks.html#sec:models">§6.2</a>, and is therefore
+a heuristic about <span class="sha">SHA-256</span>, not a proof about it: SHACAL-2 is a fixed, public,
+emphatically non-ideal cipher whose “key schedule” is literally the
+message expansion of <a class="xref" href="#sec:roundshape">§3.3</a>, so the assumption that
+distinct message blocks act like independent random permutations is
+exactly the leap of faith the model licenses and cannot justify. A
+concrete reminder that the idealization is lossy: Davies–Meyer has
+<em>trivially computable fixed points</em>—solving \(E_m(h)\shaplus h = h\)
+means \(E_m(h)=0\), i.e.&nbsp;\(h = E_m^{-1}(0)\), one short computation per
+block—a harmless-looking feature that became a lever for the
+long-message second-preimage attacks of <a class="xref" href="06-frameworks.html#sec:mdstructure">§6.3</a>.</p>
+
+<h3 class="runin">The moral, localized.</h3>
+
+<p>Two layers, two theorems: the mode
+proved unconditionally, the compression proved in an idealized model, and
+between them they reduce the security of the whole edifice to a single
+demand—that the core map \(f\) (equivalently the cipher \(E\)) have no
+exploitable structure. That demand is <a class="xref" href="06-frameworks.html#sec:frameworks">§6</a>'s gap, and
+it is where every remaining page of this paper lives. The architecture is
+solved mathematics; the mystery has been squeezed into one finite object,
+and the constructions of this section are precisely the machinery that
+did the squeezing.</p>
+
+<h2 id="sec:rivest">3.5&ensp;One honest theorem: invertible diffusion <a class="pdf-ref" href="kng256.pdf#page=19">PDF p. 19</a></h2>
+
+<p>Amid so much that is unproved, it is worth exhibiting in full one of the
+few genuine theorems about <span class="sha">SHA-256</span>'s internals—partly because it is
+lovely, partly because its proof lives in exactly the finite geometry of
+<a class="xref" href="#sec:statespace">§3.2</a>, and partly because it shows the “middle
+territory” of <a class="xref" href="06-frameworks.html#sec:gap">§6.7</a> is not empty by necessity.</p>
+
+<p>Ask a basic anatomical question about the stirring maps of
+<a class="xref" href="#sec:roundshape">§3.3</a>: are \(\Sigma_0, \Sigma_1, \sigma_0, \sigma_1\)
+<em>bijections</em> of the word space \(\Ftwo^{32}\)? (They are
+\(\Ftwo\)-linear, hence “nonlinearities” only through the other lens of
+<a class="xref" href="#sec:statespace">§3.2</a>—as maps of \(\Ztwo\) they are wildly nonlinear.
+The question is whether they discard information.) Rivest answered this
+for the pure-rotation case in a four-page note <a class="cite" href="bibliography.html#Rivest2011">(Rivest, 2011)</a>:</p>
+
+<div class="thmbox theorem" id="thm:rivest">
+  <p><span class="thm-head">Theorem 3.4 (Rivest).</span> Let \(w\) be a power of two. The exclusive-or of \(t\) distinct rotations of
+a \(w\)-bit word,
+\(x \mapsto \mathrm{ROTR}^{r_1}(x) \shaxor \cdots \shaxor \mathrm{ROTR}^{r_t}(x)\),
+is invertible if and only if \(t\) is odd.</p>
+</div>
+
+<div class="proof"><p><em>Proof idea.</em> Identify \(\Ftwo^{32}\) with the quotient ring
+\(R = \Ftwo[x]/(x^{32}-1)\), a bit vector becoming a polynomial and
+rotation becoming multiplication by \(x^{r}\). The map in question is
+multiplication by \(p(x) = x^{r_1} + \cdots + x^{r_t}\), invertible in \(R\)
+exactly when \(\gcd\bigl(p(x),\, x^{32}-1\bigr) = 1\). Over \(\Ftwo\) the
+modulus collapses—\(x^{32} - 1 = (x-1)^{32}\), because \(32\) is a power of
+two and squaring is a ring homomorphism in characteristic \(2\)—so the
+gcd is \(1\) precisely when \((x-1) \nmid p\), i.e.&nbsp;when \(p(1) = t \bmod 2\)
+is \(1\). <span class="qed">∎</span></p></div>
+
+<p>So \(\Sigma_0 = \mathrm{ROTR}^{2} \shaxor \mathrm{ROTR}^{13} \shaxor
+\mathrm{ROTR}^{22}\) and \(\Sigma_1\), with their three rotations each, are
+bijections: they stir without spilling. The theorem repays contemplation.
+It is two lines of algebra, yet it turns on the arithmetic accident that
+the word length is a power of two, which makes the cyclic algebra \(R\)
+<em>local</em> (one maximal ideal, generated by \(x-1\)): the only way an
+xor-of-rotations can fail to be invertible is by having an even number of
+terms. Had the designers used \(33\)-bit words, \(x^{33}-1\) would factor
+richly and the parity rule would be false. Small finite geometries have
+loud opinions.</p>
+
+<p>Because the proof is constructive, invertibility need not be left as an
+existence statement: the inverses can be exhibited outright. Carrying out
+the division in \(R\)—equivalently, inverting the corresponding
+\(32\times32\) circulant matrices over \(\Ftwo\); <a class="xref" href="kng256.pdf#page=58">Appendix A (PDF p. 58)</a> gives
+a complete reference implementation, which also confirms the results on
+thousands of random words—produces closed forms that are again xors of
+rotations:</p>
+<div class="eq" id="eq:sigmainv">\[
+\begin{aligned}
+  \Sigma_0^{-1} \;&amp;=\; \bigoplus_{r \in S_0} \mathrm{ROTR}^{r},
+  &amp; S_0 &amp;= \{0,1,2,5,7,8,9,10,12,16,17,19,22,23,25,29,30\},\\
+  \Sigma_1^{-1} \;&amp;=\; \bigoplus_{r \in S_1} \mathrm{ROTR}^{r},
+  &amp; S_1 &amp;= \{2,3,5,7,9,11,12,13,18,21,22,23,24,26,27,29,30\},
+\end{aligned}
+\tag{2}
+\]</div>
+<p>each an xor of <em>seventeen</em> rotations (\(S_0\) includes \(r = 0\), the
+identity rotation). Seventeen is odd, as <a class="xref" href="#thm:rivest">Theorem 3.4</a> demands of any
+invertible xor-of-rotations—and as it must be on general grounds:
+evaluating \(p\,q \equiv 1\) at \(x = 1\) forces
+\(|p| \cdot |q| \equiv 1 \pmod 2\), so odd-weight elements have odd-weight
+inverses. The asymmetry of sparseness is the striking part: three
+rotations to stir, seventeen to unstir—more than half of the
+thirty-two possible offsets. Invertible is not the same as symmetrically
+cheap, even inside the linear layer.</p>
+
+<p>The ring picture yields more than the inverses; it computes the whole
+multiplicative life of these maps, essentially by hand. Composition of
+rotations adds offsets modulo \(32\), so write an xor-of-rotations as a
+polynomial with the <em>offsets as exponents</em>: \(\Sigma_0\) becomes
+\(p_0 = x^{2} + x^{13} + x^{22}\). Squaring is the Frobenius map of
+characteristic \(2\)—it simply doubles every offset—so squaring \(p_0\)
+three times gives, after reducing exponents modulo \(32\),
+\(\Sigma_0^{8} = \mathrm{ROTR}^{8}\): <em>eight applications of the
+three-rotation stir collapse to one bare rotation</em>. Hence
+\(\Sigma_0^{32} = \mathrm{id}\), and the order of \(\Sigma_0\) in
+\(\mathrm{GL}_{32}(\Ftwo)\) is exactly \(32\); the same computation gives
+\(\Sigma_1^{16} = \mathrm{id}\) with order exactly \(16\). In particular
+\(\Sigma_0^{-1} = \Sigma_0^{31}\) and \(\Sigma_1^{-1} = \Sigma_1^{15}\), so
+<a class="xref" href="#eq:sigmainv">(2)</a> could have been generated, offsets and all, by
+repeated squaring. One more turn of the crank and the observation
+becomes a theorem: for <em>any</em> odd xor-of-rotations \(u\) of \(32\)-bit
+words, \(u^{32} = u(x)^{32} = u(x^{32}) = u(1) = 1\), so every invertible
+xor-of-rotations has order dividing \(32\). The stirring maps of <span class="sha">SHA-256</span>,
+for all their visual violence, are elements of small \(2\)-power order in
+a \(2\)-group—one more exact structural fact living quietly next door to
+the conjectured structurelessness (<a class="xref" href="#sec:hope">§3.7</a>).</p>
+
+<p>Note what the theorem does <em>not</em> cover: \(\sigma_0 =
+\mathrm{ROTR}^{7} \shaxor \mathrm{ROTR}^{18} \shaxor \mathrm{SHR}^{3}\)
+and \(\sigma_1\) each replace one rotation by a bit-discarding shift,
+leaving the polynomial ring for plain linear algebra; and the genuinely
+non-invertible ingredients of <span class="sha">SHA-256</span> are elsewhere entirely—the
+bitwise-quadratic \(\mathrm{Ch}\) and \(\mathrm{Maj}\) and the Davies–Meyer
+feedforward, where all the designed information loss is concentrated. The
+picture that emerges is architectural: <em>lossless</em> stirring layers
+(provably so, by <a class="xref" href="#thm:rivest">Theorem 3.4</a>), <em>lossy</em> mixing concentrated in
+three auditable places. That so clean a structural statement was worth a
+research note in 2011—twenty years into the design lineage—says
+something about how sparsely theorized this territory is.</p>
+
+<div class="project" id="project-2">
+  <div class="project-title">Project 2: The linear algebra of diffusion</div>
+  <p>Write each of \(\Sigma_0, \Sigma_1, \sigma_0, \sigma_1\) as an explicit
+  \(32 \times 32\) matrix over \(\Ftwo\) and decide invertibility of the
+  \(\sigma\)'s (settling what <a class="xref" href="#thm:rivest">Theorem 3.4</a> leaves open). Compute the
+  order of each invertible map in \(\mathrm{GL}_{32}(\Ftwo)\), the cycle
+  structure of its action on \(\Ftwo^{32}\), and the subgroup the four maps
+  generate. Then reprove <a class="xref" href="#thm:rivest">Theorem 3.4</a> for general word length \(w\):
+  the answer is a pretty gcd condition (worked out in Rivest's note), and
+  comparing \(w = 32\) with \(w = 33\) makes the power-of-two accident vivid.</p>
+  <div class="project-meta"><em>Prerequisites:</em> linear algebra; programming &ensp; <em>Window:</em> 3–4 weeks</div>
+</div>
+
+<div class="project" id="project-3">
+  <div class="project-title">Project 3: Deriving the exact inverses of \(\Sigma_0\) and \(\Sigma_1\)</div>
+  <p><a class="xref" href="#thm:rivest">Theorem 3.4</a> guarantees that \(\Sigma_0\) and \(\Sigma_1\) are
+  bijections, and <a class="xref" href="#eq:sigmainv">(2)</a> displays their inverses; this
+  project derives that display from scratch, by two independent methods,
+  and decides what <a class="xref" href="#eq:sigmainv">(2)</a> deliberately leaves out. The steps
+  are fully determined:</p>
+  <ol>
+    <li><strong>Move to the ring.</strong> Identify a word with a polynomial in
+      \(R = \Ftwo[x]/(x^{32}-1)\), bit \(i\) becoming the coefficient of
+      \(x^i\), so that a rotation is multiplication by a power of \(x\).
+      Write \(\Sigma_0\) as multiplication by
+      \(p_0(x) = x^{2} + x^{13} + x^{22}\) and \(\Sigma_1\) by
+      \(p_1(x) = x^{6} + x^{11} + x^{25}\) (the <span class="sha">SHA-256</span> rotation offsets).</li>
+    <li><strong>Invert by linear algebra.</strong> Multiplication by \(p\) is an
+      \(\Ftwo\)-linear circulant map; build its \(32\times32\) matrix (columns
+      are \(p, xp, x^2p, \dots\)) and invert it over \(\Ftwo\) by Gaussian
+      elimination. The last column of the inverse, read as a polynomial
+      \(q\), satisfies \(p\,q \equiv 1 \pmod{x^{32}-1}\).</li>
+    <li><strong>Read off the answer.</strong> You should recover exactly the
+      seventeen-term rotation sets of <a class="xref" href="#eq:sigmainv">(2)</a>. Verify
+      \(p\,q = 1\) in \(R\) directly, and check your derivation against the
+      reference implementation of <a class="xref" href="kng256.pdf#page=58">Appendix A (PDF p. 58)</a>. Then reproduce
+      <a class="xref" href="#eq:sigmainv">(2)</a> a third way, with no linear algebra at all: by
+      repeated squaring, using \(\Sigma_0^{-1} = \Sigma_0^{31}\) and
+      \(\Sigma_1^{-1} = \Sigma_1^{15}\).</li>
+    <li><strong>Cross-check by Euclid.</strong> Recompute \(q\) by the extended
+      Euclidean algorithm on \(p(x)\) and \(x^{32}-1 = (x-1)^{32}\) in
+      \(\Ftwo[x]\); the two methods must agree.</li>
+    <li><strong>Contrast with the \(\sigma\)'s.</strong> Repeat for
+      \(\sigma_0 = \mathrm{ROTR}^{7}\shaxor\mathrm{ROTR}^{18}\shaxor
+      \mathrm{SHR}^{3}\): the shift \(\mathrm{SHR}^{3}\) leaves the cyclic
+      ring (it is not a unit multiple of \(x\)), so the polynomial trick
+      fails and only the matrix method applies. Decide invertibility of
+      \(\sigma_0, \sigma_1\) this way—settling what <a class="xref" href="#thm:rivest">Theorem 3.4</a>
+      does not cover.</li>
+  </ol>
+  <p>Deliverable: the two explicit inverse maps, a proof they are correct,
+  and a one-paragraph account of why the \(\sigma\)'s need the heavier tool.</p>
+  <div class="project-meta"><em>Prerequisites:</em> polynomial arithmetic over \(\Ftwo\); programming &ensp; <em>Window:</em> 2–3 weeks</div>
+</div>
+
+<h2 id="sec:nums">3.6&ensp;Nothing up my sleeve <a class="pdf-ref" href="kng256.pdf#page=22">PDF p. 22</a></h2>
+
+<p>One question a mathematician should ask of <a class="xref" href="#sec:roundshape">§3.3</a>: where do
+the constants come from? The initial state \(\mathrm{IV}\) and the sixty-four
+round constants \(K_t\) could, in principle, hide a trapdoor—constants
+engineered so their designer knows structure nobody else can see. The
+history is not hypothetical: the unexplained S-box constants of the 1970s
+DES cipher fed decades of suspicion (later resolved in the designers'
+favor), and post-Snowden, an actual back-doored NIST standard (the
+Dual_EC random generator) was withdrawn. The SHA family itself supplies
+the sharpest demonstration that its designer's choices are informed
+rather than arbitrary: the NSA's unexplained one-bit revision of SHA-0
+into SHA-1 (see the footnote in <a class="xref" href="02-history.html#sec:history">§2</a>) anticipated by four
+years the differential attack later found in the open
+literature <a class="cite" href="bibliography.html#ChabaudJoux1998">(Chabaud and Joux, 1998)</a>. The SHA-2 designers therefore
+committed to constants they visibly could not have chosen:
+\[
+  \mathrm{IV}_j = \text{first 32 fractional bits of } \sqrt{p_j},
+  \qquad
+  K_t = \text{first 32 fractional bits of } \sqrt[3]{p_t},
+\]
+where \(p_1 &lt; p_2 &lt; \cdots\) are the primes \(2, 3, 5, \dots\) <a class="cite" href="bibliography.html#FIPS180-4">(National Institute of Standards and Technology, 2015)</a>.
+(So \(\mathrm{IV}_1 = \mathtt{6a09e667}\) encodes \(\sqrt{2}-1\) in binary.)
+Such choices are called <em>nothing-up-my-sleeve</em> constants: points of
+the state space selected by a rule so canonical that no freedom remains in
+which to hide intent.</p>
+
+<p>There is a pleasing irony here that deserves a mathematician's smile: the
+constants are trusted <em>because</em> they are digits of irrational
+numbers, yet essentially nothing is proved about those digits either—the
+normality of \(\sqrt{2}\) is an open problem. The construction does not
+replace an unproved assumption with a proved one; it replaces an
+<em>unauditable</em> choice with an <em>auditable</em> one. Epistemology, not
+theorems, is doing the work—a theme by now familiar
+(<a class="xref" href="02-history.html#sec:epistemology">§2.4</a>).</p>
+
+<h2 id="sec:hope">3.7&ensp;Reasons for hope: exact solutions next door <a class="pdf-ref" href="kng256.pdf#page=22">PDF p. 22</a></h2>
+
+<p>Almost everything after this section will be statistical:
+random-mapping silhouettes, test batteries, mixing arguments—the
+approximate machinery one reaches for when exact structure is
+unavailable. Before conceding that this is the only possible register,
+it is worth assembling the evidence that exact structure keeps turning
+up <em>next door</em>, because the history of discrete iteration is
+littered with problems that looked hopelessly procedural until someone
+found the right coordinates.</p>
+
+<p>The Josephus process (<a class="xref" href="01-josephus.html#sec:josephus">§1</a>) is this paper's opening
+specimen: an \((n-1)\)-step elimination dynamics collapsed to a single
+bit rotation. <a class="xref" href="#thm:rivest">Theorem 3.4</a> is a second, living inside <span class="sha">SHA-256</span>
+itself: a question about its diffusion maps settled by two lines of
+algebra in a local ring. The genre is much larger. Additive cellular
+automata—iterative, visually turbulent, every bit as “chaotic” in
+appearance as a hash round—were solved outright by
+Martin et al. <a class="cite" href="bibliography.html#MartinOdlyzkoWolfram1984">(1984)</a>: represent configurations as
+polynomials over \(\Ftwo\) and time evolution becomes multiplication,
+with global transient and cycle structure falling out as exact
+divisibility statements. Sutner <a class="cite" href="bibliography.html#Sutner1989">(1989)</a> dispatched the Lights-Out
+puzzle the same way (the \(\sigma\)-game as \(\Ftwo\)-linear algebra). The
+pattern is older than computing: the logistic map at parameter \(4\), the
+textbook “chaotic” system, has the closed form
+\(x_t = \sin^2\!\bigl(2^t \arcsin\sqrt{x_0}\,\bigr)\)—an observation
+going back to Ulam and von Neumann, and the simplest instance of
+Schröder's program of solving iteration by
+conjugation <a class="cite" href="bibliography.html#Schroeder1871">(Schröder, 1871)</a>: find \(\psi\) making
+\(\psi \circ f \circ \psi^{-1}\) linear, and the \(t\)-th iterate is
+computed in one stroke. That program grew into modern complex
+dynamics <a class="cite" href="bibliography.html#Milnor2006">(Milnor, 2006)</a>. “Chaotic” and “exactly solvable” are
+not antonyms; they are frequently the same object described before and
+after the right change of variables.</p>
+
+<p>Within the hash family the lesson recurs. SHA-1's message schedule is
+\(\Ftwo\)-linear, hence <em>exactly</em> analyzable—its difference
+propagation is linear algebra—and that handle is precisely what the
+collision attacks of <a class="xref" href="02-history.html#sec:falling">§2.3</a> gripped. The professional
+response to such objects has been the cryptanalyst's panoply,
+differential attacks in the tradition of Biham and Shamir <a class="cite" href="bibliography.html#BihamShamir1991">(1991)</a> and
+their descendants: a <em>statistical</em> theory of near-structure,
+probability-weighted trails threaded through the rounds
+(<a class="xref" href="07-differential.html#sec:differential">§7</a> is devoted to it). The examples
+above argue for keeping a different question alive: whether some change
+of coordinates—a direct finite-geometry path, in the spirit of the
+polynomial representations that solved cellular automata, with no
+mixing theory, no ergodicity, and nothing approximate—renders some
+nontrivial slice of the iteration exactly computable. The designers'
+explicit goal was to foreclose this (<a class="xref" href="#sec:statespace">§3.2</a>), and the
+smart money says they succeeded. But the foreclosure is a conjecture,
+not a theorem; the components keep falling one at a time to exact
+methods (<a class="xref" href="#thm:rivest">Theorem 3.4</a>, the T-function
+theory <a class="cite" href="bibliography.html#KlimovShamir2003">(Klimov and Shamir, 2003</a>; <a class="cite" href="bibliography.html#Anashin2006">Anashin, 2006)</a>, the two-track reduction
+of <a class="xref" href="#sec:roundshape">§3.3</a>); and the hunting grounds are tiny finite
+objects, where undergraduate computation is a genuine research
+instrument (<a class="xref" href="09-projects.html#sec:projects">§9</a>).</p>
+
+<div id="pagenav"></div>
+</main>
+</div>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="assets/site.js"></script>
+<script defer src="assets/viz.js"></script>
+</body>
+</html>

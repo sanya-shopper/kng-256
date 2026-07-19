@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>§8 · The view from computability — SHA-256 as a Mathematical Object</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="08-computability.html">
+<div class="layout">
+<nav id="sidebar"></nav>
+<main id="content">
+<header class="page-head">
+  <p class="doc-title"><a href="index.html">SHA-256 as a Mathematical Object</a></p>
+</header>
+
+<h1 id="sec:computability">§8&ensp;The view from computability <a class="pdf-ref" href="kng256.pdf#page=49" title="Open this section in the PDF">PDF&nbsp;p.&nbsp;49</a></h1>
+
+<p>The gap of <a class="xref" href="06-frameworks.html#sec:gap">§6.7</a> is a statement about missing <em>positive</em>
+knowledge. It is worth closing the overview by asking the complementary,
+sharper question: what is <em>provably</em> true about the difficulty of
+breaking <span class="sha">SHA-256</span>? Here the news is a genuine mix of hard theorems and hard
+barriers, and the boundary between them is itself part of the object’s
+significance.</p>
+
+<h2 id="sec:npsearch">8.1&ensp;Breaking <span class="sha">SHA-256</span> is an <span class="sc">np</span> search problem <a class="pdf-ref" href="kng256.pdf#page=50">PDF p. 50</a></h2>
+
+<p>Fix a target digest \(y\) and ask for a preimage: some \(x\) with
+\(\SHA(x) = y\). Because <span class="sha">SHA-256</span> is computable by a small circuit
+(<a class="xref" href="02-history.html#sec:history">§2</a>), a candidate \(x\) can be <em>checked</em> in linear
+time, so preimage-finding is an <span class="sc">np</span> search problem in the exact
+sense of Cook and Levin&nbsp;<a class="cite" href="bibliography.html#CookLevin1971">(Cook, 1971)</a>: the “inversion”
+relation is polynomial-time decidable, and the only question is the cost
+of <em>search</em>. Encode one evaluation of the compression function as a
+Boolean circuit—about \(2^{16}\) gates—and the equation
+\(\SHA(x)=y\) becomes a concrete instance of the satisfiability problem
+<span class="sc">sat</span>, the canonical <span class="sc">np</span>-complete language.</p>
+
+<p>The translation is worth seeing once, because it is almost embarrassingly
+direct (<a class="xref" href="#fig:tseitin">Figure 15</a>). Give every wire of the circuit its own
+Boolean variable; each gate then constrains its three wires by a handful
+of clauses, satisfied exactly by the gate’s truth table; pin the \(256\)
+output variables to the bits of \(y\). The conjunction of all clauses is
+satisfiable <em>if and only if</em> a preimage exists, and any satisfying
+assignment, read off the input wires, <em>is</em> a preimage. The whole of
+<span class="sha">SHA-256</span>’s round structure—\(\Sigma\)’s, carries, message schedule—flattens
+into a few hundred thousand such clauses, syntactically indistinguishable
+from any other <span class="sc">sat</span> instance. A modern conflict-driven
+(“<span class="sc">cdcl</span>”) solver then does something almost mathematical with
+it: it explores partial assignments, and each dead end is analyzed into
+a <em>learned clause</em>—a small lemma, added to the formula, recording
+why that region of the search space is empty. A solver run is a
+proof-by-cases of astronomical width, conducted by a machine that
+invents its own case analysis.</p>
+
+<figure class="static-figure" id="fig:tseitin">
+  <div style="display:flex;align-items:center;justify-content:center;gap:1.4rem;flex-wrap:wrap;padding:0.6rem 0;">
+    <svg viewBox="0 0 230 110" width="230" height="110" role="img" aria-label="An AND gate with inputs u and v and output w">
+      <!-- input wires -->
+      <line x1="18" y1="32" x2="72" y2="32" stroke="var(--ink-secondary)" stroke-width="2"/>
+      <line x1="18" y1="78" x2="72" y2="78" stroke="var(--ink-secondary)" stroke-width="2"/>
+      <text x="12" y="36" text-anchor="end" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-size="15" fill="var(--ink)">u</text>
+      <text x="12" y="82" text-anchor="end" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-size="15" fill="var(--ink)">v</text>
+      <!-- gate body (D shape) -->
+      <path d="M 72 12 L 112 12 A 43 43 0 0 1 112 98 L 72 98 Z" fill="var(--projfill)" stroke="var(--ink-secondary)" stroke-width="2.5"/>
+      <text x="103" y="62" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="17" fill="var(--ink)">∧</text>
+      <!-- output wire -->
+      <line x1="155" y1="55" x2="208" y2="55" stroke="var(--ink-secondary)" stroke-width="2"/>
+      <text x="214" y="59" text-anchor="start" font-family="Georgia, 'Times New Roman', serif" font-style="italic" font-size="15" fill="var(--ink)">w</text>
+    </svg>
+    <span style="font-size:1.6em;color:#333;" aria-hidden="true">⟶</span>
+    <div style="text-align:left;line-height:1.9;">
+      \( (\lnot u \vee \lnot v \vee w) \)<br>
+      \( (u \vee \lnot w) \)<br>
+      \( (v \vee \lnot w) \)
+    </div>
+  </div>
+  <p style="text-align:center;font-size:0.85em;margin:0.2rem 0 0.6rem;">one fresh variable per wire, a few clauses per gate;
+  \({\sim}2^{16}\) gates \(\Rightarrow\) a few \(\times 10^{5}\) clauses;
+  pin \(256\) output literals to \(y\) and solve.</p>
+  <figcaption><strong>Figure 15.</strong> The reduction that makes “invert <span class="sha">SHA-256</span>” a <span class="sc">sat</span>
+  instance: each gate becomes clauses that are satisfied exactly by its
+  truth table (shown: \(w = u \wedge v\)). Nothing about the construction
+  is clever, and that is the point—membership in <span class="sc">np</span> is a
+  statement about <em>checkability</em>, and it holds for <span class="sha">SHA-256</span> as
+  mechanically as for any puzzle whose solutions can be verified.
+  <a class="pdf-ref" href="kng256.pdf#page=50">PDF p. 50</a></figcaption>
+</figure>
+
+<p>This is not a metaphor: the reduction is run in practice, and by now the
+solvers are genuine instruments of record. As early as 2006, Mironov and
+Zhang reproduced Wang-style MD5 collisions with an off-the-shelf
+<span class="sc">sat</span> solver, no differential expertise wired in—the solver
+rediscovering, clause by learned clause, constraints it had never been
+told&nbsp;<a class="cite" href="bibliography.html#MironovZhang2006">(Mironov and Zhang, 2006)</a>. Today the traffic runs both directions:
+the current record semi-free-start collision on \(39\)-round <span class="sha">SHA-256</span> was
+found with a <span class="sc">sat</span>/<span class="sc">smt</span> search for the differential
+trails of <a class="xref" href="07-differential.html#sec:craft">§7.2</a>&nbsp;<a class="cite" href="bibliography.html#LiLiuWang2024">(Li et al., 2024)</a>, and a programmatic
+<span class="sc">sat</span> solver—one that injects cryptanalytic knowledge as it
+runs—produced the first practical \(38\)-round semi-free-start collision
+independently of the classical toolchain&nbsp;<a class="cite" href="bibliography.html#AlamgirNejatiBright2024">(Alamgir et al., 2024)</a>.
+The empirical shape of all this effort is a cliff: instances for few
+rounds collapse in milliseconds, then somewhere past round \(20\) the
+running times turn vertical, and no amount of solver engineering has
+moved the wall more than a round or two per decade. The cliff’s very
+existence is one more coordinate in the natural history of the
+function—and, unlike most such coordinates, it is cheap to measure.</p>
+
+<div class="project" id="project-14">
+  <div class="project-title">Project 14: The <span class="sc">sat</span> cliff</div>
+  <p>Build (or generate with existing tools) <span class="sc">cnf</span> encodings of
+  \(r\)-round <span class="sha">SHA-256</span> preimage instances (<a class="xref" href="#fig:tseitin">Figure 15</a>) and feed
+  them to two or three modern solvers. Chart solving time against \(r\)
+  until timeout; then vary what is pinned (full digest, partial digest,
+  collision instead of preimage) and watch the cliff move. Plot, on the
+  same axis, where the statistical batteries start failing
+  (<a class="xref" href="06-frameworks.html#sec:gap">§6.7</a>’s project) and where the differential trails of
+  <a class="xref" href="07-differential.html#sec:siege">§7.4</a> die: three instruments’ frontiers, never to our
+  knowledge drawn on one chart. The deliverable is that chart—a
+  measured portrait of “hardness turning on” round by round.</p>
+  <div class="project-meta"><em>Prerequisites:</em> programming; propositional logic &ensp; <em>Window:</em> 4–6 weeks</div>
+</div>
+
+<p>But note precisely what <span class="sc">np</span>-completeness does and does not say.
+It says the <em>worst case</em> of <span class="sc">sat</span> is hard unless
+\(\mathrm{P}=\mathrm{NP}\); it says almost nothing about the specific,
+highly structured instances that hashing produces. Cryptography needs
+<em>average-case</em> and <em>one-way</em> hardness—hard instances that are
+easy to <em>generate</em> with a solution—and this is a strictly stronger
+and more delicate demand than worst-case <span class="sc">np</span>-hardness. No
+reduction shows that inverting <span class="sha">SHA-256</span> is <span class="sc">np</span>-hard, and this is
+not merely an unfilled cell in the table: there is a theorem-shaped
+reason to expect no such reduction. Akavia, Goldreich, Goldwasser, and
+Moshkovitz showed that a black-box reduction (of the standard,
+non-adaptive kind) from an <span class="sc">np</span>-hard problem to <em>inverting a
+one-way function</em> would itself trigger complexity-theoretic collapses
+nobody believes&nbsp;<a class="cite" href="bibliography.html#AkaviaGGM2006">(Akavia et al., 2006)</a>. The missing bridge between
+\(\mathrm{P} \ne \mathrm{NP}\) and <span class="sha">SHA-256</span>’s security is not awaiting a
+clever graduate student; by the best current evidence, the standard
+bridge-building technology provably cannot span that river.</p>
+
+<h2 id="sec:worlds">8.2&ensp;Five worlds, one function <a class="pdf-ref" href="kng256.pdf#page=51">PDF p. 51</a></h2>
+
+<p>The distinction just drawn—worst-case hardness versus generatable
+hardness—organizes the deepest open question in the area, and
+Impagliazzo gave it an unforgettable form: five possible worlds, exactly
+one of which is real&nbsp;<a class="cite" href="bibliography.html#Impagliazzo1995">(Impagliazzo, 1995)</a>. <a class="xref" href="#fig:worlds">Figure 16</a> draws
+the ladder and scores our function in each world. The point of the
+exercise for this paper: <em>whether an object like <span class="sha">SHA-256</span> can exist
+at all</em> is not a detail of cryptography but the exact content of the
+rung between Pessiland and Minicrypt—the existence of one-way
+functions—and it is wide open. Everything this paper treats as
+mysterious about one specific function is, one level up, the mystery on
+which the classification of computational reality turns.</p>
+
+<figure class="viz-figure" id="fig:worlds">
+  <div class="viz" id="viz-worlds"></div>
+  <figcaption><strong>Figure 16.</strong> Impagliazzo’s five worlds: mutually
+  exclusive possibilities for how computation works, exactly one of
+  them actual, none of them ruled out. <span class="sha">SHA-256</span>’s conjectured properties
+  assert that we live above the one-way-function line (at least
+  Minicrypt)—a claim strictly <em>weaker</em> than what public-key
+  cryptography bets on, and strictly <em>stronger</em> than
+  \(\mathrm{P} \ne \mathrm{NP}\). Note where the quantum threat falls:
+  Shor-type algorithms attack the classical inhabitants of Cryptomania,
+  while against the generic hashing of Minicrypt the provable quantum
+  gain is only the square root of <a class="xref" href="#sec:barriers">§8.4</a>.
+  <a class="pdf-ref" href="kng256.pdf#page=52">static version: PDF p. 52</a></figcaption>
+</figure>
+
+<p>Two theorems furnish that observation with content, and a third—the
+one this section builds toward—turns it into an exact equivalence.</p>
+
+<p>First: <em>Minicrypt has a canonical witness</em>. Levin constructed an
+explicit, fully specified “universal one-way function”—a concrete
+program one can write down today—which is one-way <em>if any one-way
+function exists at all</em> (the tale, and the construction, are told
+in <a class="cite" href="bibliography.html#Levin2003">Levin, 2003</a>). Existence of the whole kingdom is thus equivalent to
+the hardness of one specific function, in print since the 1980s. Why,
+then, does anyone bother with <span class="sha">SHA-256</span>? Because Levin’s function is a
+diagonalization—roughly, it runs all short programs and combines
+their outputs—and its guarantee is bought at constants and exponents
+that make it a philosophical instrument, not an engineering material.
+Once any one-way function exists, moreover, the whole private-key
+toolbox follows by explicit constructions: Håstad, Impagliazzo,
+Levin, and Luby showed pseudorandom generators can be built from
+<em>any</em> one-way function&nbsp;<a class="cite" href="bibliography.html#HILL1999">(Håstad et al., 1999)</a>, with signatures and
+message authentication downstream. Read against <a class="xref" href="06-frameworks.html#sec:gap">§6.7</a>: theory
+already possesses, with proofs, the entire architecture the world
+needs—resting on an unproven ground floor and running too slowly to
+use. <span class="sha">SHA-256</span> is the engineering shadow of Levin’s function: the object
+you deploy when you want the universal guarantee at gigabytes per
+second, and are willing to trade the theorem away for it.</p>
+
+<p>Second, the same result read as a boundary: the Akavia–Goldreich–Goldwasser–Moshkovitz theorem above says the ground floor cannot be
+poured from worst-case <span class="sc">np</span>-hardness by standard reductions. The
+two faces together frame the epistemic situation exactly: everything
+above the one-way-function line is solved mathematics; the line itself
+is untethered to the rest of complexity theory.</p>
+
+<h2 id="sec:liupass">8.3&ensp;An exact address for the one-way line <a class="pdf-ref" href="kng256.pdf#page=52">PDF p. 52</a></h2>
+
+<p>The third result is recent (2020) and, to our taste, the most
+beautiful in the whole subject, because it identifies the one-way-function line of <a class="xref" href="#fig:worlds">Figure 16</a> with the hardness of a problem this
+paper has been circling from the start: <em>detecting structure in
+apparently random strings</em>. Making that precise takes four definitions,
+each elementary; we give them carefully, because the payoff is a genuine
+“if and only if” and it is worth being able to read it exactly.</p>
+
+<div class="thmbox definition">
+  <p><span class="thm-head">Kolmogorov complexity.</span> Fix once and for all a universal
+  Turing machine \(U\) (a fixed interpreter: it runs a program \(\Pi\) on an
+  input and prints the result). The <em>Kolmogorov complexity</em> of a
+  string \(x \in \bitstrings^{*}\) is the length of the shortest program
+  that outputs it,
+  \[
+    K(x) \;=\; \min\bigl\{\, |\Pi| \;:\; U(\Pi) = x \,\bigr\}.
+  \]
+  This is the honest measure of “information content”: a patterned
+  string like \((01)^{n}\) has a tiny generator (“print <code>01</code>
+  \(n\) times”), so \(K \approx \log_2 n\), while a structureless string has
+  no description shorter than itself, \(K(x) \approx |x|\). The trouble, for
+  our purposes, is that \(K\) is <em>uncomputable</em>—pinning it down
+  solves the halting problem—so it cannot be the hard problem
+  cryptography stands on. Something must give the program a deadline.</p>
+</div>
+
+<div class="thmbox definition">
+  <p><span class="thm-head">Time-bounded Kolmogorov complexity.</span> Fix a polynomial time
+  bound \(t(\cdot)\). The <em>\(t\)-time-bounded</em> complexity restricts the
+  minimization to programs that print \(x\) <em>within \(t(|x|)\) steps</em>:
+  \[
+    K^{t}(x) \;=\; \min\bigl\{\, |\Pi| \;:\;
+        U(\Pi) = x \text{ in at most } t(|x|) \text{ steps} \,\bigr\}.
+  \]
+  Now the quantity <em>is</em> computable—enumerate all programs of length
+  \(\le |x|\), run each for \(t(|x|)\) steps, keep the shortest that prints
+  \(x\)—but that brute force costs about \(2^{|x|}\). The entire question is
+  whether one can do better than brute force, and specifically whether one
+  can do better <em>on average</em>, over a random string \(x\).</p>
+</div>
+
+<div class="thmbox definition">
+  <p><span class="thm-head">Why almost every string is incompressible.</span> A counting fact
+  fixes the landscape (<a class="xref" href="#fig:kolmogorov">Figure 17</a>). There are only
+  \(2^{n-d}-1 &lt; 2^{n-d}\) programs shorter than \(n-d\) bits, so at most a
+  \(2^{-d}\) fraction of the \(2^{n}\) strings of length \(n\) can have
+  \(K^{t}(x) &lt; n-d\). Compressible strings—those with real structure a
+  fast program can exploit—are <em>exponentially rare</em>; the mass of
+  \(K^{t}\) piles up just below the diagonal \(K^{t}(x)=n\). In particular the
+  <em>trivial estimate</em> “\(K^{t}(x) = |x|\)”—equivalently, the
+  one-line algorithm that ignores \(x\) and outputs its length—is correct
+  to within \(d\) bits on all but a \(2^{-d}\) fraction of inputs. Estimating
+  \(K^{t}\) better than this trivial baseline is precisely the act of
+  <em>detecting the rare structure</em>, and that is the task whose
+  difficulty the theorem measures.</p>
+</div>
+
+<figure class="viz-figure" id="fig:kolmogorov">
+  <div class="viz" id="viz-kolmogorov"></div>
+  <figcaption><strong>Figure 17.</strong> The distribution of time-bounded Kolmogorov complexity over
+  random \(n\)-bit strings. By counting, at most a \(2^{-d}\) fraction can
+  be compressed below \(n-d\); the histogram is crushed against the
+  incompressible edge \(K^{t}\!=\!n\). The one-line “output \(|x|\)”
+  algorithm is therefore right for nearly everyone—and Liu–Pass say
+  that noticeably out-performing it, on average, is exactly as hard as
+  inverting every one-way function.
+  <a class="pdf-ref" href="kng256.pdf#page=53">static version: PDF p. 53</a></figcaption>
+</figure>
+
+<div class="thmbox definition">
+  <p><span class="thm-head">Mild average-case hardness, and one-wayness.</span> Two more
+  definitions, now the load-bearing ones. Say \(K^{t}\) is
+  <em>mildly hard-on-average</em> if some polynomial \(p\) makes it
+  uncomputable on a noticeable slice: for every probabilistic
+  polynomial-time algorithm \(A\) and all large \(n\),
+  \[
+    \Pr_{x \,\gets\, \bitstrings^{n}}
+       \bigl[\, A(x) \ne K^{t}(x) \,\bigr] \;\ge\; \frac{1}{p(n)} .
+  \]
+  The word to dwell on is <em>mild</em>: \(A\) is permitted to be right on a
+  \(1 - 1/p(n)\) super-majority of strings; hardness on just an
+  inverse-polynomial sliver suffices. And a <em>one-way function</em>—the
+  one-wayness informally invoked back in <a class="xref" href="#sec:npsearch">§8.1</a>—is a
+  polynomial-time computable \(f\) that no probabilistic polynomial-time \(A\)
+  can invert except with vanishing probability: for every such \(A\), every
+  polynomial \(p\), and all large \(n\),
+  \[
+    \Pr_{x \,\gets\, \bitstrings^{n}}
+       \bigl[\, f(A(f(x))) = f(x) \,\bigr] \;&lt;\; \frac{1}{p(n)} .
+  \]
+  Existence of any such \(f\) is the Minicrypt hypothesis—the rung of
+  <a class="xref" href="#fig:worlds">Figure 16</a> on which <span class="sha">SHA-256</span>’s conjectured life depends.</p>
+</div>
+
+<div class="thmbox theorem" id="thm:liupass">
+  <p><span class="thm-head">Theorem 8.1 (Liu–Pass 2020).</span>
+  For every polynomial \(t(n) \ge (1+\varepsilon)n\) with \(\varepsilon&gt;0\)
+  constant, the following are equivalent:</p>
+  <ol>
+    <li>One-way functions exist (equivalently: secure private-key
+    encryption, pseudorandom generators, pseudorandom functions, digital
+    signatures, and commitments all exist).</li>
+    <li>\(K^{t}\) is mildly hard-on-average.</li>
+  </ol>
+  <p>Moreover the equivalence is robust to approximation: if one-way
+  functions exist then no efficient algorithm can even
+  \((d\log n)\)-approximate \(K^{t}\) on meaningfully more than the trivial
+  fraction, for any constant \(d\)&nbsp;<a class="cite" href="bibliography.html#LiuPass2020">(Liu and Pass, 2020)</a>.</p>
+</div>
+
+<p>The approximation clause is the sharpest way to feel the result. The
+do-nothing algorithm “output \(|x|\)” already \((d\log n)\)-approximates
+\(K^{t}\) with probability \(\ge 1 - n^{-d}\) (the counting fact again); the
+theorem says that beating even <em>that</em> baseline, by any
+inverse-polynomial margin, is as hard as breaking <em>every</em> one-way
+function at once. A hair of non-trivial structure-detection, made
+reliable, would collapse all of private-key cryptography.</p>
+
+<p>Now read <a class="xref" href="#thm:liupass">Theorem 8.1</a> in this paper’s language. “\(K^{t}(x)\) is
+small” means <em>\(x\) has detectable structure</em>—a short program
+generates it fast. Estimating \(K^{t}\) on random inputs is therefore
+exactly <em>hunting for hidden structure in apparently random
+strings, on average</em>—the naturalist’s question of <a class="xref" href="02-history.html#sec:epistemology">§2.4</a>,
+promoted from one function to all strings. The theorem says this hunt is
+(mildly) hard <em>if and only if</em> objects like <span class="sha">SHA-256</span> can exist at
+all. The connection is not a loose analogy; it is the same activity. A
+pseudorandom string—say a stretch of the counter stream \(\SHA(1),
+\SHA(2), \dots\) of <a class="xref" href="06-frameworks.html#sec:below">§6.4</a>—has genuinely <em>low</em> \(K^{t}\)
+(the short program “print \(\SHA(1..m)\)” generates it quickly), yet
+is engineered to look maximally incompressible; a distinguisher that
+noticed the gap would be estimating \(K^{t}\) better than trivial on
+exactly these strings, which is to say breaking the generator. So the
+empirical program of <a class="xref" href="06-frameworks.html#sec:gap">§6.7</a>—point an instrument at a
+pseudorandom object and measure whether any structure pokes through—is
+not merely <em>analogous</em> to the problem on which the existence of
+cryptography rests. Up to the formalization, it <em>is</em> that problem,
+shrunk to a single function and a laptop. We know no cleaner statement
+of why the small experiments of <a class="xref" href="09-projects.html#sec:projects">§9</a> sit on the main line
+of the subject rather than beside it.</p>
+
+<h2 id="sec:barriers">8.4&ensp;Two-sided barriers: what is provably out of reach <a class="pdf-ref" href="kng256.pdf#page=55">PDF p. 55</a></h2>
+
+<p>The deepest results in this corner are <em>impossibility</em> theorems,
+and they cut in two directions at once.</p>
+
+<p>On the side of <em>attacks</em>, the quantum model yields rare
+unconditional lower bounds. Grover search inverts any black-box function
+on \(N\) points in \(\Theta(\sqrt{N})\) queries, and this is provably
+optimal—no quantum algorithm does better <em>relative to the
+oracle</em>&nbsp;<a class="cite" href="bibliography.html#BBBV1997">(Bennett et al., 1997)</a>; for collisions, the Brassard–Høyer–Tapp
+birthday-style algorithm costs \(\Theta(N^{1/3})\), and Aaronson and Shi
+proved a matching \(\Omega(N^{1/3})\) quantum lower
+bound&nbsp;<a class="cite" href="bibliography.html#AaronsonShi2004">(Aaronson and Shi, 2004)</a>. These theorems bound what <em>any</em>
+algorithm can do against a function that behaves as a random oracle, so
+they translate into concrete, believed-tight security levels for
+<span class="sha">SHA-256</span>—\(128\) quantum bits of preimage resistance, and the reason a
+\(256\)-bit digest is considered “quantum-safe” for collision resistance.
+The catch, familiar by now, is the model: the bounds hold in the
+black-box world and become claims about <span class="sha">SHA-256</span> only under the heuristic
+that no shortcut exploits its actual circuit.</p>
+
+<p>It is worth pausing to give exponents like \(2^{128}\) an empirical
+scale, because the planet happens to be running the relevant
+experiment. The proof-of-work industry of <a class="xref" href="02-history.html#sec:uses">§2.1</a> evaluates
+<span class="sha">SHA-256</span> about \(10^{21}\) times per second—roughly \(2^{70}\)—and its
+cumulative total to date is on the order of \(2^{96}\) evaluations:
+comfortably the largest computation of any kind in human history,
+every cycle of it hammering on this one function. Two readings. As a
+<em>statistical</em> instrument: block arrivals track the uniform model
+with textbook fidelity, so this is the most expensive test of the
+random-function conjecture ever conducted, passed to date. As a
+<em>yardstick</em>: the deepest partial inversion all that work has ever
+exhibited is a digest beginning with roughly a hundred zero
+bits—each mined block is a certified partial preimage, currently
+costing about \(2^{79}\) evaluations apiece—which still leaves the full
+\(256\)-bit inversion about \(2^{156}\) times beyond the species’ total
+output, and even the \(2^{128}\) birthday bound a factor of four billion
+past everything computed so far. When <a class="xref" href="04-random-maps.html#sec:telescope">§4.3</a> says the
+global geometry of the functional graph is “operationally
+unreachable,” this is the industrial base against which
+“unreachable” is calibrated.</p>
+
+<p>On the side of <em>proofs</em>, the barrier theorems explain the gap of
+<a class="xref" href="06-frameworks.html#sec:gap">§6.7</a> as something deeper than a lack of effort. The
+<em>natural proofs</em> barrier of Razborov and
+Rudich&nbsp;<a class="cite" href="bibliography.html#RazborovRudich1997">(Razborov and Rudich, 1997)</a> shows that any proof of a strong
+circuit lower bound which is itself “constructive and large”—the form
+essentially all known lower-bound techniques take—would, ironically,
+yield an algorithm breaking the very pseudorandom functions such a lower
+bound is meant to certify. In slogan form: <em>the existence of objects
+like <span class="sha">SHA-256</span> is precisely what prevents us from proving that objects like
+<span class="sha">SHA-256</span> are hard</em> by current methods. This is why nobody expects an
+unconditional proof of <span class="sha">SHA-256</span>’s security in the foreseeable future, and
+why the honest theorems in the subject are either conditional
+(<a class="xref" href="06-frameworks.html#sec:frameworks">§6</a>), relativized (the quantum bounds above), or about
+components rather than the whole (<a class="xref" href="03-geometry.html#thm:rivest">Theorem 3.4</a>).</p>
+
+<h2 id="sec:verified">8.5&ensp;What the proof assistants did prove <a class="pdf-ref" href="kng256.pdf#page=55">PDF p. 55</a></h2>
+
+<p>After a section of impossibilities, it is worth recording where
+machine-checked mathematics has <em>succeeded</em> with <span class="sha">SHA-256</span>—because
+it has, completely, one floor down. In 2015 Appel produced a formal,
+machine-checked proof, in the Coq proof assistant, that OpenSSL’s C
+implementation of <span class="sha">SHA-256</span> computes exactly the function specified in
+FIPS 180-4: every pointer offset, every rotation, every corner of C
+semantics, verified down to a mechanized model of the
+compiler’s view of the program&nbsp;<a class="cite" href="bibliography.html#Appel2015">(Appel, 2015)</a>. The HACL<sup>*</sup>
+project carried the method to an entire cryptographic library, written
+in the F<sup>*</sup> proof language and compiled to C; its
+verified <span class="sha">SHA-256</span> ships inside Firefox, executing in ordinary users’
+browsers&nbsp;<a class="cite" href="bibliography.html#Zinzindohoue2017">(Zinzindohoué et al., 2017)</a>. These are not toy exercises; they
+retire a whole species of real historical failure, the
+<em>implementation</em> bug—and they are proofs about <span class="sha">SHA-256</span> in the
+strictest sense of the word.</p>
+
+<p>The epistemological inversion deserves to be savored. <em>Everything
+provable about <span class="sha">SHA-256</span> has now been proved by machines: namely, that the
+program is the function.</em> What no one can prove is any property of the
+function itself. Formal verification thus sharpens the boundary of
+<a class="xref" href="06-frameworks.html#sec:gap">§6.7</a> into a visible line: below it, mechanized
+certainty—code equals specification, checked symbol by symbol; above
+it, Rogaway’s human ignorance (<a class="xref" href="06-frameworks.html#sec:definitions">§6.1</a>), trust
+underwritten by two decades of failed attack. The axiom has quietly
+moved. It is no longer “this function is one-way”; it is “this
+function is the one we wrote down”—and only the second statement is
+checkable. A mathematician could not ask for a cleaner exhibit of where,
+exactly, in one industrial object, the proved ends and the conjectured
+begins.</p>
+
+<h2 id="sec:leaves">8.6&ensp;Where this leaves the program <a class="pdf-ref" href="kng256.pdf#page=56">PDF p. 56</a></h2>
+
+<p>The computability view sharpens, rather than dampens, the case for the
+empirical program of this paper. Unconditional hardness is provably out
+of reach by known methods; worst-case <span class="sc">np</span>-hardness is the wrong
+target, and provably unavailable by standard reductions
+(<a class="xref" href="#sec:worlds">§8.2</a>); the clean theorems that do exist are relativized
+bounds assuming random-oracle behavior, or certify the code rather than
+the function (<a class="xref" href="#sec:verified">§8.5</a>). What is <em>not</em> ruled out—by
+any barrier theorem—is the discovery of exact, non-statistical
+structure in specific reduced systems, of the kind <a class="xref" href="03-geometry.html#sec:hope">§3.7</a>
+catalogued next door and <a class="xref" href="03-geometry.html#thm:rivest">Theorem 3.4</a> exhibited inside the function
+itself. The barriers forbid a certain style of <em>general</em> proof;
+they say nothing against a Josephus-style collapse of a
+<em>particular</em> finite object. That is exactly the crack the
+undergraduate program of <a class="xref" href="09-projects.html#sec:projects">§9</a> proposes to work in: not to
+prove <span class="sha">SHA-256</span> hard—provably hopeless—but to map, instance by instance
+and coordinate by coordinate, where the structure ends and the noise
+begins.</p>
+
+<div id="pagenav"></div>
+</main>
+</div>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="assets/site.js"></script>
+<script defer src="assets/viz.js"></script>
+</body>
+</html>

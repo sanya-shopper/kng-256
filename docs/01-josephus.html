@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>§1 · A pattern where none was promised — SHA-256 as a Mathematical Object</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="01-josephus.html">
+<div class="layout">
+<nav id="sidebar"></nav>
+<main id="content">
+<header class="page-head">
+  <p class="doc-title"><a href="index.html">SHA-256 as a Mathematical Object</a></p>
+</header>
+
+<h1 id="sec:josephus">§1&ensp;A pattern where none was promised <a class="pdf-ref" href="kng256.pdf#page=3" title="Open this section in the PDF">PDF&nbsp;p.&nbsp;3</a></h1>
+
+<p><em>Concrete Mathematics</em> opens with a small massacre&nbsp;<a class="cite" href="bibliography.html#GKP1994">(Graham et al., 1994, §1.1)</a>.
+Number \(n\) people \(1,2,\dots,n\) standing in a circle, and going around the
+circle eliminate every second person until one survives. Which position
+\(J(n)\) survives? For \(n=10\) the eliminations run
+\(2,4,6,8,10,3,7,1,9\), and the survivor is \(J(10)=5\)
+(<a class="xref" href="#fig:josephus">Figure 1</a>). Computing small cases and staring at them reveals
+that if \(n = 2^m + \ell\) with \(0 \le \ell &lt; 2^m\), then</p>
+<div class="eq" id="eq:josephus">\[
+  J(2^m + \ell) \;=\; 2\ell + 1 , \tag{1}
+\]</div>
+<p>which says something better in binary: <em>\(J(n)\) is the one-bit
+cyclic left shift of \(n\)</em>. For \(n = 10 = (1010)_2\) we get \(J(n) =
+(0101)_2 = 5\). An iterative algorithmic process ends up having a
+solution involving a simple bit manipulation of the binary
+representation of the input. (Hold on to one question as you read: what
+happens if every <em>third</em> person is eliminated instead? We will not
+answer it until <a class="xref" href="04-random-maps.html#sec:josephus3">§4.4</a>, where it becomes a parable about
+the constants in <span class="sha">SHA-256</span>&rsquo;s own definition.)</p>
+
+<figure class="viz-figure" id="fig:josephus">
+  <div class="viz" id="viz-josephus"></div>
+  <figcaption><strong>Figure 1.</strong> Circular decimation for \(n=10\), read left to right; the
+  ellipsis elides the intermediate eliminations of the final lap. Small
+  gray indices give the global elimination order; position \(5\) survives,
+  and \(J(10) = 5 = (0101)_2\) is the one-bit cyclic shift of
+  \(n = 10 = (1010)_2\).
+    <a class="pdf-ref" href="kng256.pdf#page=3">static version: PDF p. 3</a></figcaption>
+</figure>
+
+<p>Dwell for a moment on what <em>kind</em> of fact this is. The problem is
+defined <em>iteratively</em>: the survivor is specified as the outcome of
+\(n-1\) eliminations performed in order, and the obvious way to compute
+\(J(n)\) is to simulate them, one by one, around the circle. The closed
+form abolishes the simulation. The answer is obtained by merely
+<em>rearranging the bits of the input</em>—one cyclic shift, no iteration
+at all: a computation that appeared to require \(n-1\) sequential steps
+collapses to a single stroke. Nothing in the problem statement promised
+that such a collapse existed; it was simply there, waiting to be noticed.</p>
+
+<p>It will pay immediately to name this operation the way the <span class="sha">SHA-256</span>
+standard does&nbsp;<a class="cite" href="bibliography.html#FIPS180-4">(National Institute of Standards and Technology, 2015)</a>. For a \(w\)-bit word \(x\) and \(0 \le r &lt; w\),
+write
+\[
+  \mathrm{ROTL}^{r}(x), \qquad \mathrm{ROTR}^{r}(x), \qquad \mathrm{SHR}^{r}(x)
+\]
+for the cyclic left rotation, the cyclic right rotation, and the ordinary
+(bit-discarding) right shift of \(x\) by \(r\) positions. In this notation the
+Josephus law <a class="xref" href="#eq:josephus">(1)</a> is simply
+\[
+  J(n) \;=\; \mathrm{ROTL}^{1}(n),
+\]
+the rotation taken in the \((\lfloor \lg n \rfloor + 1)\)-bit window
+that \(n\) occupies. The rotation operators are <em>literal components
+of <span class="sha">SHA-256</span></em>. Its round function stirs the state with fixed maps
+\(\Sigma_0, \Sigma_1, \sigma_0, \sigma_1\), each an exclusive-or of two
+or three rotations of a \(32\)-bit word (<a class="xref" href="03-geometry.html#sec:roundshape">§3.3</a>)—the
+survivor map of a circle of \(32\) bits, composed with itself in
+threes. The same innocent operation that <em>creates</em> the visible
+structure in the Josephus problem is deployed in <span class="sha">SHA-256</span> to
+<em>destroy</em> visible structure; and one of the very few theorems
+known about <span class="sha">SHA-256</span>&rsquo;s internals is a statement about exactly these
+xor-of-rotation maps (<a class="xref" href="03-geometry.html#sec:rivest">§3.5</a>).</p>
+
+<figure class="viz-figure viz-extra">
+  <div class="viz" id="viz-bitops"></div>
+  <figcaption>Try the machine&rsquo;s moves: rotate, shift, ⊕ and ⊞ on a 32-bit word, live. (Interactive; not in the PDF.)</figcaption>
+</figure>
+
+<p><em>Innocent discrete processes secretly respect structure</em>, and the
+structure is usually found empirically—by computing small cases,
+arranging them suggestively, and noticing. The recurrence came first; the
+closed form <a class="xref" href="#eq:josephus">(1)</a> was extracted from data.</p>
+
+<p>The Josephus problem is not a lone curiosity. A whole gallery of famous
+iterative processes collapse the same way, each to a one-line function
+of the binary digits of its input: the Tower of Hanoi, Gray codes, the
+game of Nim, the parity of Pascal&rsquo;s triangle, even—in a sense that
+must be stated carefully—the notorious \(3x+1\) map.
+The appendix gallery collects these specimens, in increasing order of
+discomfort: three where the collapse is total, one (Kummer&rsquo;s carry
+theorem) where the collapse names the central character of this whole
+paper, and one where a collapsing change of coordinates provably
+<em>exists</em> and provably <em>helps not at all</em>. The moral compounds
+across the gallery: bit operations are not just where these collapses
+land, they are a recurring <em>language</em> in which discrete iteration,
+when it is secretly simple, tends to become simple—and
+(<a class="xref" href="03-geometry.html#sec:statespace">§3.2</a>) they are precisely the alphabet from which
+<span class="sha">SHA-256</span> is built.</p>
+
+<p>This paper is about the mirror image of that phenomenon. The function
+<span class="sha">SHA-256</span>, which we will introduce slowly, is a discrete process on binary
+strings that was <em>engineered so that no analyst would ever have a
+Josephus moment with it</em>: no change of representation, no clever
+coordinate system, no generating function is supposed to reveal any
+respected structure whatsoever—even though the function is built from a
+few dozen lines of elementary operations, all of them individually as
+transparent as the decimation rule. <span class="sha">SHA-256</span> too is defined iteratively—a
+fixed round transformation applied sixty-four times, itself chained block
+after block—and the working conjecture is that, unlike the decimation,
+its iteration admits no collapse. Since the entire document is an
+extended commentary on that claim, it is worth displaying once, in the
+form of a conjecture—informal, but falsifiable in every clause:</p>
+
+<div class="thmbox conjecture" id="conj:nocollapse">
+  <p><span class="thm-head">Conjecture 1.1 (the no-collapse conjecture; informal).</span> No change of representation tames <span class="sha">SHA-256</span>: no bit-shift pattern, no
+closed form, no algorithm of any kind computes it materially faster
+than performing its sixty-four rounds; and no nontrivial property of
+its outputs can be predicted materially more cheaply than by computing
+them.</p>
+</div>
+
+<p>Nothing remotely like this is proved, and <a class="xref" href="08-computability.html#sec:worlds">§8.2</a> explains
+why a proof is beyond the current reach of mathematics. What is known
+traces the conjecture&rsquo;s boundary. Inward, the few honest theorems about
+the internals say which components, taken alone, are transparent
+(<a class="xref" href="03-geometry.html#thm:rivest">Theorem 3.4</a> is the loveliest); the round-by-round records of
+<a class="xref" href="07-differential.html#sec:siege">§7.4</a> measure how far into the iteration analysis currently
+penetrates. Outward, the theory of time-bounded Kolmogorov complexity
+(<a class="xref" href="08-computability.html#sec:liupass">§8.3</a>) is the formal home of &ldquo;no shortcut exists,&rdquo; and
+turns the conjecture&rsquo;s vague &ldquo;materially faster&rdquo; into exact
+statements. In between lies everything this paper does. Whether the
+engineers succeeded is, remarkably, not a settled question but an
+empirical one, now running as an uncontrolled worldwide experiment for
+a quarter of a century. Making parts of that experiment controlled,
+small, and measurable is the research program of this note.</p>
+
+<div id="pagenav"></div>
+</main>
+</div>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="assets/site.js"></script>
+<script defer src="assets/viz.js"></script>
+</body>
+</html>

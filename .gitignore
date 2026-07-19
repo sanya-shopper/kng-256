@@ -10,6 +10,10 @@
 *.fdb_latexmk
 main.pdf
 
+# site: local preview copy of the PDF (the Pages workflow copies the
+# tracked ./kng256.pdf into docs/ at deploy time)
+docs/kng256.pdf
+
 # editor droppings
 *~
 \#*\#

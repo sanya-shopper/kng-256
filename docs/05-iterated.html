@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>§5 · Iterating the function — SHA-256 as a Mathematical Object</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="05-iterated.html">
+<div class="layout">
+<nav id="sidebar"></nav>
+<main id="content">
+<header class="page-head">
+  <p class="doc-title"><a href="index.html">SHA-256 as a Mathematical Object</a></p>
+</header>
+
+<h1 id="sec:iterated">§5&ensp;Iterating the function <a class="pdf-ref" href="kng256.pdf#page=27" title="Open this section in the PDF">PDF&nbsp;p.&nbsp;27</a></h1>
+
+<p><a class="xref" href="04-random-maps.html#sec:randommaps">§4</a> pointed Flajolet&rsquo;s telescope at a single
+application of <span class="sha">SHA-256</span>. But the function is very often applied to its own
+output—</p>
+\[
+  \varphi(x) \;=\; \SHA(x), \qquad
+  \varphi^{k} \;=\; \underbrace{\SHA \circ \SHA \circ \cdots \circ
+  \SHA}_{k},
+\]
+<p>read as a self-map of the \(256\)-bit strings (feed the digest back as a
+one-block message). This is no idle variation. Password stretching runs
+\(\varphi^{k}\) for \(k\) in the hundreds of thousands; hash chains for
+one-time passwords and hash-based signatures are iteration made into a
+protocol; Bitcoin&rsquo;s core primitive is literally \(\varphi^{2}\), the
+double hash \(\SHA(\SHA(\cdot))\). And iteration is its own coordinate
+system for the random-function conjecture: the <em>dynamics</em> of
+\(\varphi\)—how its image shrinks, where its orbits settle, whether it
+hides fixed points—are a fresh battery of falsifiable predictions,
+sharper in some ways than the static silhouette of <a class="xref" href="04-random-maps.html#sec:randommaps">§4</a>
+because they probe the function&rsquo;s interaction with <em>itself</em>. This
+section reads those predictions off the random-map model and asks, in
+each case, what an anomaly would mean. The user&rsquo;s instinct is the right
+place to start: one might imagine iteration eventually shuffling the
+state space like a random permutation—and seeing <em>exactly why
+that almost happens, and exactly what stops it</em>, turns out to expose the
+single design decision that makes <span class="sha">SHA-256</span> one-way.</p>
+
+<h2 id="sec:shrinking">5.1&ensp;Iteration leaks: the shrinking image <a class="pdf-ref" href="kng256.pdf#page=27">PDF p. 27</a></h2>
+
+<p>A permutation loses nothing: applied repeatedly, it merely relabels. A
+random-looking map is different, and the difference compounds. Recall
+from <a class="xref" href="04-random-maps.html#sec:fungraph">§4.1</a> that one application of a random map covers only
+\((1-e^{-1})N \approx 0.63\,N\) of the space; the leaves—the \(37\%\) of
+points with no preimage—are gone after one step and never return.
+Apply \(\varphi\) again and the survivors thin again, by the same logic
+applied to the image. Writing \(\beta_{k}\) for the expected fraction of
+the space still reachable after \(k\) steps, the recurrence is exactly</p>
+\[
+  \beta_{0} = 1, \qquad \beta_{k+1} = 1 - e^{-\beta_{k}},
+\]
+<p>(&ldquo;a point survives to step \(k+1\) iff at least one of its
+\(\varphi\)-preimages survived to step \(k\)&rdquo;), and its solution decays
+with a clean asymptotic law&nbsp;<a class="cite" href="bibliography.html#FlajoletOdlyzko1990">(Flajolet and Odlyzko, 1990)</a>:</p>
+\[
+  \beta_{k} \;\sim\; \frac{2}{k} \qquad (k \to \infty).
+\]
+<p>Iteration is a funnel (<a class="xref" href="#fig:funnel">Figure 8</a>). After \(k\) rounds the reachable
+image has shrunk to about \(2N/k\) points, so the process has quietly
+discarded roughly \(\log_{2}(k/2)\) bits of range. The number is small but
+not zero and the moral is exact: <em>composing a hash with itself can
+only lose entropy, never create it</em>. For a password-stretching count of
+\(k = 10^{6}\), the naive iterate \(\varphi^{k}\) confines its outputs to a
+\(2^{-19}\) fraction of the digest space—nineteen bits of the advertised
+\(256\) silently surrendered to the funnel.</p>
+
+<figure class="viz-figure" id="fig:funnel">
+  <div class="viz" id="viz-funnel"></div>
+  <figcaption><strong>Figure 8.</strong> Iterating a random-looking map is a one-way funnel. Each
+  application discards the current leaves, so the reachable image shrinks
+  as \(\beta_{k}\sim 2/k\) toward the <em>recurrent set</em> \(R\)—the union
+  of all cycles, about \(\sqrt{\pi N/2}\approx 2^{128.3}\) points. On \(R\),
+  and only there, \(\varphi\) acts as a permutation (<a class="xref" href="#sec:permutation">§5.2</a>).
+  The funnel is why iterated hashing loses (a little) entropy, and why
+  real key-stretching functions are <em>not</em> pure iteration.
+    <a class="pdf-ref" href="kng256.pdf#page=28">static version: PDF p. 28</a></figcaption>
+</figure>
+
+<p>Two consequences deserve flagging. First, the prediction is
+<em>measurable</em>: the shrinkage law \(\beta_{k}\sim 2/k\) is a specific
+curve that truncated <span class="sha">SHA-256</span> must trace if it is random-like, and a
+reduced-round or structured map need not (<a class="xref" href="09-projects.html#sec:projects">§9</a>). Second, the practical fix is illuminating precisely because it <em>breaks</em> the
+composition. Standardized password-based key derivation does not compute
+\(\varphi^{k}\); it re-injects the password and a salt at every step,
+iterating a map like \(x \mapsto \SHA(x \shaxor \text{password})\) that
+changes each round&nbsp;<a class="cite" href="bibliography.html#NIST_SP800132">(Turan et al., 2010)</a>. That is no longer a single
+function composed with itself—it is a <em>driven</em> iteration, formally
+the random walk of <a class="xref" href="06-frameworks.html#sec:prngs">§6.6</a> rather than a functional graph—and
+the salt-dependent driving is exactly what defeats the funnel (and the
+precomputation attack of <a class="xref" href="#sec:itervuln">§5.4</a>). The theory tells the
+engineer why the naive design leaks and the standard one does not.</p>
+
+<h2 id="sec:permutation">5.2&ensp;The permutation at the bottom of the funnel <a class="pdf-ref" href="kng256.pdf#page=28">PDF p. 28</a></h2>
+
+<p>Where does the funnel end? Not at nothing: the image cannot shrink below
+the points that lie on cycles, since a cyclic point is its own distant
+iterate and survives forever. These <em>recurrent</em> points—the set
+\(R=\bigcap_{k\ge 0}\varphi^{k}(\State)\), the union of all the cycles of
+<a class="xref" href="04-random-maps.html#fig:rho">Figure 7</a>—are the funnel&rsquo;s floor, and here the user&rsquo;s intuition
+lands exactly. <em>On \(R\), iterated <span class="sha">SHA-256</span> is a genuine permutation.</em>
+This is not a probabilistic near-miss; it is a theorem about every
+finite self-map: restricted to its recurrent set a function is a
+bijection, because each cyclic point has exactly one cyclic preimage
+(the point before it on its cycle). <span class="sha">SHA-256</span> permutes its cycles, and
+\(\varphi\) carried to the limit is a permutation of the roughly
+\(\sqrt{\pi N/2}\approx 2^{128.3}\) recurrent points—conjecturally a
+<em>uniformly random</em> permutation of a random such subset, which is
+the strongest form of the random-map hypothesis.</p>
+
+<p>So the imagined &ldquo;random permutation induced by iteration&rdquo; is real—but confined to an unreachable floor. The recurrent set is a
+random-looking subset of size \(2^{128.3}\), with no short description and
+no way to enumerate it short of traversing orbits of length \(2^{128}\);
+one can prove it hosts a permutation without ever exhibiting a single
+one of its elements. This is the same epistemic shape as the rest of the
+paper (<a class="xref" href="04-random-maps.html#sec:telescope">§4.3</a>): a structure we can characterize in full
+and visit never.</p>
+
+<p>Now the sharp contrast that answers &ldquo;why astronomically unlikely?&rdquo;
+Being a permutation on the <em>recurrent set</em> is automatic; being a
+permutation on the <em>whole</em> space \(\State\) is the rarest thing a map
+can be. The fraction of self-maps that are permutations is</p>
+\[
+  \frac{N!}{N^{N}} \;\approx\; \sqrt{2\pi N}\; e^{-N},
+\]
+<p>so a uniformly random map is a permutation with probability of order
+\(e^{-N}\): not astronomically but <em>doubly</em>-exponentially small, about
+\(2^{-1.44\cdot 2^{256}}\). Equivalently, injectivity anywhere is
+expensive—a random map already has about \(0.37 N\) points sharing their
+images with others. Hence if <span class="sha">SHA-256</span> were ever found to be injective on
+its full domain, or even to cover meaningfully more than the predicted
+\(0.63N\) on the first step, that would not be a lucky coincidence: it
+would be a gross structural signal, a deviation of the exact kind
+<a class="xref" href="06-frameworks.html#sec:gap">§6.7</a> is built to detect. The permutation lives at the bottom
+of the funnel by necessity; a permutation at the <em>top</em> would be a
+five-alarm anomaly.</p>
+
+<h2 id="sec:unless">5.3&ensp;&ldquo;Unless&hellip;&rdquo;: the one addition that breaks the bijection <a class="pdf-ref" href="kng256.pdf#page=29">PDF p. 29</a></h2>
+
+<p>Why is <span class="sha">SHA-256</span> not that anomaly—why does it funnel at all, rather than
+permute? The answer is a single line of its construction, and it is worth
+seeing because it identifies one-wayness with lossiness as the <em>same
+design act</em>. Recall from <a class="xref" href="03-geometry.html#sec:roundshape">§3.3</a> that the compression
+function is a block cipher run in Davies–Meyer mode:</p>
+\[
+  f(h, m) \;=\; E_{m}(h) \,\shaplus\, h,
+\]
+<p>where \(E_{m}\)—the core of <span class="sha">SHA-256</span>, essentially the cipher SHACAL-2—is,
+for each fixed message block \(m\), a <em>permutation</em> of the state
+(every round is invertible, so the whole cipher is a bijection one could
+run backward). If \(f\) were just \(E_{m}\), iteration would be the iteration
+of a permutation: reversible, lossless, its functional graph all cycles
+and no trees, injective on the whole space—precisely the
+doubly-exponentially unlikely object of <a class="xref" href="#sec:permutation">§5.2</a>. The
+feedforward &ldquo;\(\shaplus\,h\)&rdquo; is what destroys this
+(<a class="xref" href="#fig:feedforward">Figure 9</a>). Adding the input back turns a bijection into a
+generically many-to-one map—the sum of a permutation and the identity
+need not be injective—and it is this one modular addition that makes
+\(f\) one-way, non-invertible, and lossy all at once. The tree-and-funnel
+geometry of <a class="xref" href="04-random-maps.html#sec:fungraph">§4.1</a> and <a class="xref" href="#sec:shrinking">§5.1</a>, the \(37\%\) of leaves, the
+\(2/k\) shrinkage, the very existence of preimage-resistance: all of it is
+manufactured by the single &ldquo;\(\shaplus\,h\)&rdquo; that the designers added
+exactly so the rounds could not be run backward.</p>
+
+<figure class="viz-figure" id="fig:feedforward">
+  <div class="viz" id="viz-feedforward"></div>
+  <figcaption><strong>Figure 9.</strong> The &ldquo;unless.&rdquo; The cipher \(E_{m}\) at the heart of <span class="sha">SHA-256</span> is a
+  permutation (left): iterate it and nothing is lost. The Davies–Meyer
+  feedforward \(f=E_{m}(h)\shaplus h\) (right) adds the input back, turning
+  the bijection into a many-to-one map with leaves and collisions—the
+  source of every tree, every lost bit, and all one-wayness. Iterated
+  <span class="sha">SHA-256</span> would be a random permutation on its whole domain
+  (<a class="xref" href="#sec:permutation">§5.2</a>) were it not for this one modular addition.
+    <a class="pdf-ref" href="kng256.pdf#page=30">static version: PDF p. 30</a></figcaption>
+</figure>
+
+<p>This is the resolution of the opening puzzle. Iterated <span class="sha">SHA-256</span> does induce
+a random permutation—but on its recurrent floor, by necessity, not on
+the whole space, which the feedforward forbids. The &ldquo;unless&rdquo; is
+literal: <em>unless one deletes the &ldquo;\(\shaplus\,h\),&rdquo;</em> in which case
+<span class="sha">SHA-256</span> degenerates into its underlying block cipher, iteration becomes
+reversible, and the funnel disappears along with the security. The
+lossiness the user intuited as a near-impossibility is, seen correctly,
+the deliberate and load-bearing content of the design.</p>
+
+<h2 id="sec:itervuln">5.4&ensp;Vulnerabilities specific to iteration <a class="pdf-ref" href="kng256.pdf#page=30">PDF p. 30</a></h2>
+
+<p>Iteration is not merely a lens; it is an attack surface and a building
+block, and three concrete phenomena round out the picture.</p>
+
+<h3 class="runin">Hash chains, and why they are only as strong as one step.</h3>
+<p>Applying \(\varphi\) repeatedly and revealing the chain <em>backward</em> is
+a classic authentication primitive: Lamport&rsquo;s one-time
+passwords&nbsp;<a class="cite" href="bibliography.html#Lamport1981">(Lamport, 1981)</a> store \(\varphi^{n}(s)\) on the server and
+release \(\varphi^{n-1}(s), \varphi^{n-2}(s), \dots\) one login at a time,
+each value verified by one forward application and unforgeable ahead of
+time by one-wayness. The same skeleton—iterate a one-way step, reveal
+in reverse—underlies hash-based signatures (<a class="xref" href="02-history.html#sec:uses">§2.1</a>). What the
+functional-graph view contributes is a caution: a chain is exactly as
+strong as the one-wayness of a <em>single</em> step, and if a short cycle
+or a cheap partial inversion existed for the toy scales of
+<a class="xref" href="09-projects.html#sec:projects">§9</a>, the whole chain would unravel at once. Iteration
+concentrates risk onto the per-step preimage problem.</p>
+
+<h3 class="runin">Time–memory trade-offs: iteration as the attacker&rsquo;s weapon.</h3>
+<p>The most striking vulnerability is that iterated hashing is the
+data structure an adversary uses to <em>invert</em> a one-way function by
+precomputation. Hellman&rsquo;s time–memory trade-off&nbsp;<a class="cite" href="bibliography.html#Hellman1980">(Hellman, 1980)</a>
+covers the domain with long chains \(x, \varphi(x), \varphi^{2}(x),
+\dots\), stores only the endpoints, and thereby inverts \(\varphi\) on a
+fresh target in online time \(T\) and memory \(M\) obeying</p>
+\[
+  T\,M^{2} \;\approx\; N^{2},
+\]
+<p>so that a one-time precomputation buys balanced online cost
+\(T = M = N^{2/3}\)—far below the \(N\) of blind brute force. Oechslin&rsquo;s
+<em>rainbow tables</em>&nbsp;<a class="cite" href="bibliography.html#Oechslin2003">(Oechslin, 2003)</a> sharpen the constants with
+per-column reduction functions and made the technique an everyday
+password-cracking tool. At full <span class="sha">SHA-256</span> scale \(N^{2/3}=2^{170.7}\) is
+safely unreachable, but against low-entropy inputs (short passwords) the
+trade-off is devastating—and its defeat is once again the
+<em>driving</em> of <a class="xref" href="#sec:shrinking">§5.1</a>: a per-user salt makes every
+target&rsquo;s chain independent, so no shared precomputation
+applies&nbsp;<a class="cite" href="bibliography.html#NIST_SP800132">(Turan et al., 2010)</a>. The same iteration that stretches a key
+for the defender builds the table for the attacker; salt is what breaks
+the symmetry.</p>
+
+<h3 class="runin">Fixed points and short cycles: cheap, sharp predictions.</h3>
+<p>Finally, iteration poses questions with crisp random-model answers that
+are eminently testable at toy scale. How many fixed points—strings
+with \(\SHA(x)=x\)—should exist? For a random map the count is
+\(\mathrm{Poisson}(1)\): expected value exactly \(1\), with probability
+\(e^{-1}\approx 0.37\) of <em>none</em>. So <span class="sha">SHA-256</span> very probably has a
+handful (likely one) genuine \(256\)-bit fixed point that no one will ever
+exhibit, a pleasant cousin of the &ldquo;does \(\SHA(x)=x\) have a solution?&rdquo;
+puzzle. More generally the expected number of cycles of length \(\ell\) is
+\(1/\ell\), a harmonic profile summing to the \(\sqrt{\pi N/2}\) recurrent
+points of <a class="xref" href="#sec:permutation">§5.2</a>. Each of these is a falsifiable
+prediction about a structureless map; a truncated <span class="sha">SHA-256</span> that showed too
+many fixed points, or cycles of anomalous length, would be exhibiting
+structure. That nobody has looked, at model-organism scale, is the
+recurring opportunity of this prospectus.</p>
+
+<div class="project" id="project-6">
+  <div class="project-title">Project 6: The dynamics of iteration</div>
+  <p>Extend the functional-graph atlas of <a class="xref" href="04-random-maps.html#sec:telescope">§4.3</a> from static
+  statistics to <em>dynamics</em>. For \(\varphi_{n}(x) = \) first \(n\) bits
+  of \(\SHA(x)\), \(n = 16, \dots, 30\): (i) measure the image-shrinkage
+  curve \(\beta_{k}=|\varphi_{n}^{k}(\State)|/N\) and fit it against the
+  \(\beta_{k+1}=1-e^{-\beta_{k}}\) law and its \(2/k\)
+  tail&nbsp;<a class="cite" href="bibliography.html#FlajoletOdlyzko1990">(Flajolet and Odlyzko, 1990)</a>; (ii) count fixed points and short
+  cycles and compare with the \(\mathrm{Poisson}(1)\) and \(1/\ell\)
+  predictions; (iii) locate the recurrent set and confirm \(\varphi\)
+  permutes it. Then repeat with reduced-round <span class="sha">SHA-256</span> and with the
+  feedforward <em>removed</em> (pure \(E_{m}\), a permutation) as a control,
+  watching the funnel switch off. As a capstone, implement a small
+  Hellman table&nbsp;<a class="cite" href="bibliography.html#Hellman1980">(Hellman, 1980)</a> on \(\varphi_{n}\) and measure the
+  \(TM^{2}=N^{2}\) trade-off directly, with and without salt. Every
+  quantity is exactly computable for \(n \le 30\), and the &ldquo;remove the
+  feedforward&rdquo; control makes the mechanism of <a class="xref" href="#sec:unless">§5.3</a> visible
+  as data.</p>
+  <div class="project-meta"><em>Prerequisites:</em> programming; a first probability course &ensp; <em>Window:</em> 6–8 weeks (flagship)</div>
+</div>
+
+<div id="pagenav"></div>
+</main>
+</div>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="assets/site.js"></script>
+<script defer src="assets/viz.js"></script>
+</body>
+</html>

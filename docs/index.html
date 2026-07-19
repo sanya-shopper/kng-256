@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SHA-256 as a Mathematical Object — A Field Guide and a Program of Small Questions</title>
+<meta name="description" content="An interactive companion to the prospectus: SHA-256 framed historically, geometrically, probabilistically, and complexity-theoretically, with live visualizations and undergraduate research projects.">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="index.html">
+<div class="layout">
+<nav id="sidebar"></nav>
+<main id="content">
+<header class="page-head">
+  <p class="doc-title">SHA-256 as a Mathematical Object</p>
+</header>
+
+<h1>\(\SHA\) as a Mathematical Object<br>
+<span style="font-size:1.05rem;font-weight:normal;">A Field Guide and a Program of Small Questions</span></h1>
+
+<p class="note">This site is the browsable, interactive companion to a working draft written
+for mathematician colleagues. The text below is the paper's, in full; the figures marked
+<em>interactive</em> are live re-creations that run in your browser, and every section and
+figure carries a <a class="pdf-ref" href="kng256.pdf">PDF</a> chip linking to the
+corresponding page of the typeset paper.</p>
+
+<div class="hero-links">
+  <a href="kng256.pdf">⬇ Read the PDF</a>
+  <a href="01-josephus.html">Start at §1 →</a>
+  <a href="03-geometry.html#viz-avalanche">Try the live avalanche demo</a>
+  <a href="bibliography.html">References</a>
+</div>
+
+<div class="abstract">
+<span class="abstract-head">Abstract</span>
+<p>The function \(\SHA\) maps arbitrary bit-strings of bounded length to
+\(256\)-bit strings. It is one of the most heavily used mathematical objects
+on Earth, and one of the least understood: a quarter-century of study has
+produced neither a proof of any of its conjectured properties nor any
+observable deviation from the behavior of a random function. This note
+introduces \(\SHA\) historically and empirically—what it is for, why it has
+lasted—and then frames it geometrically, as a self-map of the finite space
+\((\Ztwo)^8\) built by deliberately alternating two incompatible group
+structures on the same \(2^{256}\)-point set—a clash the \(2\)-adic metric
+brings into sharp focus, sorting the machine operations by whether they
+respect it and opening an unexpected line to the nonarchimedean dynamics
+of \(p\)-adic disks. We describe the frameworks that
+exist for analyzing such objects, why a large gap separates “passes every
+test we have” from “provably pseudorandom,” and how the
+complex-analytic tradition of Flajolet and collaborators, brought to bear
+on the statistics of random mappings, offers concrete, measurable
+coordinates for locating \(\SHA\) in the space of pseudorandom generators.
+We then open the adversary’s own toolbox—differential cryptanalysis, the
+method that felled this function’s ancestors, with its remarkable secret
+history—and close with the view from computational complexity:
+<span class="sc">sat</span> solvers, Impagliazzo’s five worlds, and what
+theorem provers did and did not prove. Throughout, we flag self-contained
+subprojects suitable for undergraduates in short research windows.</p>
+</div>
+
+<p><em>A word on how to read what follows.</em> This is a
+deliberately leisurely introduction: we approach <span class="sha">SHA-256</span> the long way
+around, with excursions into history, epistemology, finite geometry, and
+analytic combinatorics, because the object of interest is not the
+algorithm so much as where it sits—its context, its significance, and
+the peculiar shape of what is and is not known about it. Readers
+impatient for the algorithm itself should know that it is short and
+entirely public: the Wikipedia page on SHA-2 contains a complete and
+perfectly accessible, if dense, definition in pseudocode, and the
+official standard (NIST’s FIPS 180-4) is only a few pages longer; both
+are cited where the round function is anatomized
+(<a class="xref" href="03-geometry.html#sec:roundshape">§3.3</a>).
+Nothing about the definition is hidden. Everything about its behavior is.</p>
+
+<h2 id="contents">Contents</h2>
+<ul class="toc-list">
+  <li><span class="toc-num">1</span><a href="01-josephus.html">A pattern where none was promised</a> <a class="pdf-ref" href="kng256.pdf#page=3">PDF p. 3</a></li>
+  <li><span class="toc-num">2</span><a href="02-history.html">The object, observed from outside</a> <a class="pdf-ref" href="kng256.pdf#page=5">PDF p. 5</a>
+    <ul>
+      <li><a href="02-history.html#sec:uses">2.1 A catalogue of uses</a></li>
+      <li><a href="02-history.html#sec:elderhash">2.2 The original hash functions</a></li>
+      <li><a href="02-history.html#sec:falling">2.3 Cryptographic hash functions</a></li>
+      <li><a href="02-history.html#sec:epistemology">2.4 The epistemological situation</a></li>
+    </ul>
+  </li>
+  <li><span class="toc-num">3</span><a href="03-geometry.html">Anatomy: a self-map of a finite space</a> <a class="pdf-ref" href="kng256.pdf#page=10">PDF p. 10</a>
+    <ul>
+      <li><a href="03-geometry.html#sec:merkledamgard">3.1 From arbitrary bit strings to one finite map</a></li>
+      <li><a href="03-geometry.html#sec:statespace">3.2 The state space and its two rival geometries</a></li>
+      <li><a href="03-geometry.html#sec:roundshape">3.3 The compression function, structurally</a></li>
+      <li><a href="03-geometry.html#sec:constructions">3.4 Two constructions that come with proofs</a></li>
+      <li><a href="03-geometry.html#sec:rivest">3.5 One honest theorem: invertible diffusion</a></li>
+      <li><a href="03-geometry.html#sec:nums">3.6 Nothing up my sleeve</a></li>
+      <li><a href="03-geometry.html#sec:hope">3.7 Reasons for hope: exact solutions next door</a></li>
+    </ul>
+  </li>
+  <li><span class="toc-num">4</span><a href="04-random-maps.html">Random mappings: Flajolet’s telescope</a> <a class="pdf-ref" href="kng256.pdf#page=23">PDF p. 23</a>
+    <ul>
+      <li><a href="04-random-maps.html#sec:fungraph">4.1 The functional graph of a random map</a></li>
+      <li><a href="04-random-maps.html#sec:singularity">4.2 Where the constants come from</a></li>
+      <li><a href="04-random-maps.html#sec:telescope">4.3 The telescope, pointed at SHA-256</a></li>
+      <li><a href="04-random-maps.html#sec:josephus3">4.4 Coda: counting to three, and the dials of SHA-256</a></li>
+    </ul>
+  </li>
+  <li><span class="toc-num">5</span><a href="05-iterated.html">Iterating the function</a> <a class="pdf-ref" href="kng256.pdf#page=27">PDF p. 27</a>
+    <ul>
+      <li><a href="05-iterated.html#sec:shrinking">5.1 Iteration leaks: the shrinking image</a></li>
+      <li><a href="05-iterated.html#sec:permutation">5.2 The permutation at the bottom of the funnel</a></li>
+      <li><a href="05-iterated.html#sec:unless">5.3 “Unless…”: the one addition that breaks the bijection</a></li>
+      <li><a href="05-iterated.html#sec:itervuln">5.4 Vulnerabilities specific to iteration</a></li>
+    </ul>
+  </li>
+  <li><span class="toc-num">6</span><a href="06-frameworks.html">Frameworks, and the size of the gap</a> <a class="pdf-ref" href="kng256.pdf#page=31">PDF p. 31</a>
+    <ul>
+      <li><a href="06-frameworks.html#sec:definitions">6.1 What “pseudorandom” officially means</a></li>
+      <li><a href="06-frameworks.html#sec:models">6.2 Idealized models: reasoning above the object</a></li>
+      <li><a href="06-frameworks.html#sec:mdstructure">6.3 The construction is not the oracle</a></li>
+      <li><a href="06-frameworks.html#sec:below">6.4 Empirical and adversarial measurement</a></li>
+      <li><a href="06-frameworks.html#sec:disttest">6.5 How much can statistics even see?</a></li>
+      <li><a href="06-frameworks.html#sec:prngs">6.6 Interlude: what a finished theory looks like</a></li>
+      <li><a href="06-frameworks.html#sec:gap">6.7 The gap, stated plainly</a></li>
+      <li><a href="06-frameworks.html#sec:provable">6.8 The road not taken: hashes with theorems</a></li>
+    </ul>
+  </li>
+  <li><span class="toc-num">7</span><a href="07-differential.html">The adversary’s calculus: differential cryptanalysis</a> <a class="pdf-ref" href="kng256.pdf#page=44">PDF p. 44</a>
+    <ul>
+      <li><a href="07-differential.html#sec:diffcalc">7.1 A calculus of differences</a></li>
+      <li><a href="07-differential.html#sec:craft">7.2 Trails, tolls, and free rounds</a></li>
+      <li><a href="07-differential.html#sec:secrethistory">7.3 A method twenty years secret</a></li>
+      <li><a href="07-differential.html#sec:siege">7.4 The siege of SHA-256, and where it stands</a></li>
+      <li><a href="07-differential.html#sec:mlcrypt">7.5 Coda: can a machine learn the difference?</a></li>
+    </ul>
+  </li>
+  <li><span class="toc-num">8</span><a href="08-computability.html">The view from computability</a> <a class="pdf-ref" href="kng256.pdf#page=49">PDF p. 49</a>
+    <ul>
+      <li><a href="08-computability.html#sec:npsearch">8.1 Breaking SHA-256 is an NP search problem</a></li>
+      <li><a href="08-computability.html#sec:worlds">8.2 Five worlds, one function</a></li>
+      <li><a href="08-computability.html#sec:liupass">8.3 An exact address for the one-way line</a></li>
+      <li><a href="08-computability.html#sec:barriers">8.4 Two-sided barriers</a></li>
+      <li><a href="08-computability.html#sec:verified">8.5 What the proof assistants did prove</a></li>
+    </ul>
+  </li>
+  <li><span class="toc-num">9</span><a href="09-projects.html">Undergraduate short projects</a> <a class="pdf-ref" href="kng256.pdf#page=56">PDF p. 56</a></li>
+  <li><span class="toc-num">A</span><span>Reference implementation: inverting \(\Sigma_0\) and \(\Sigma_1\)</span> <a class="pdf-ref" href="kng256.pdf#page=58">PDF p. 58</a></li>
+  <li><span class="toc-num">B</span><span>Reference implementation: the centralizer census</span> <a class="pdf-ref" href="kng256.pdf#page=61">PDF p. 61</a></li>
+  <li><span class="toc-num">&nbsp;</span><a href="bibliography.html">References</a> <a class="pdf-ref" href="kng256.pdf#page=73">PDF p. 73</a></li>
+</ul>
+
+<p class="note">The two appendices are code listings and live in the PDF only; the
+scripts themselves ship with the paper's repository. The bibliography page
+mirrors the paper's thematically clustered references.</p>
+
+<div id="pagenav"></div>
+</main>
+</div>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="assets/site.js"></script>
+</body>
+</html>

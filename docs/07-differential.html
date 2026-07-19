@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>§7 · The adversary’s calculus — SHA-256 as a Mathematical Object</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="07-differential.html">
+<div class="layout">
+<nav id="sidebar"></nav>
+<main id="content">
+<header class="page-head">
+  <p class="doc-title"><a href="index.html">SHA-256 as a Mathematical Object</a></p>
+</header>
+
+<h1 id="sec:differential">§7&ensp;The adversary’s calculus: differential cryptanalysis <a class="pdf-ref" href="kng256.pdf#page=44" title="Open this section in the PDF">PDF&nbsp;p.&nbsp;44</a></h1>
+
+<p><a class="xref" href="06-frameworks.html#sec:below">§6.4</a> reported the adversarial state of the art as bare round
+counts. This section opens the instrument that produces those numbers.
+Differential cryptanalysis is the only mathematical technology that has
+ever killed a member of this design family—it felled MD5, SHA-0, and
+SHA-1 (<a class="xref" href="02-history.html#sec:falling">§2.3</a>)—and its core idea is elementary enough to
+state in one line: <em>since the function cannot be understood, study
+its finite differences instead</em>. What follows is the calculus itself,
+its startling secret history, the story of its mechanization, and an
+honest account of where, on <span class="sha">SHA-256</span>, it is currently stuck. Readers who
+absorb this section will understand precisely what the “round counts”
+of <a class="xref" href="06-frameworks.html#sec:below">§6.4</a> measure.</p>
+
+<h2 id="sec:diffcalc">7.1&ensp;A calculus of differences <a class="pdf-ref" href="kng256.pdf#page=44">PDF p. 44</a></h2>
+
+<p>For a map \(F\) on bit strings and a fixed <em>input difference</em>
+\(\Delta\), consider the discrete derivative
+\[
+  D_{\Delta}F(x) \;=\; F(x \shaxor \Delta) \,\shaxor\, F(x),
+\]
+the exact finite-difference analogue of differentiation, with \(\shaxor\)
+playing subtraction in the \(\Ftwo\)-geometry of <a class="xref" href="03-geometry.html#sec:statespace">§3.2</a>.
+The adversary’s question is distributional: for random \(x\), what does
+\(D_{\Delta}F(x)\) look like?</p>
+
+<p>Two observations power everything. First, <em>differencing kills
+constants and linear structure</em>. If \(L\) is \(\Ftwo\)-linear—a rotation,
+a shift, one of the \(\Sigma/\sigma\) maps of <a class="xref" href="03-geometry.html#sec:roundshape">§3.3</a>—then
+\[
+  D_{\Delta}L(x) \;=\; L(\Delta) \qquad \text{for every } x:
+\]
+the derivative is a <em>constant</em>, independent of the unknown input,
+exactly as \(\mathrm{d}/\mathrm{d}x\) annihilates constants and
+linearizes. All the values the attacker does not know—the other
+message words, the chaining state, the round constants \(K_t\)—drop out
+of the linear part of every round. This is why one differentiates: a
+difference propagates through the transparent parts of the circuit
+deterministically, leaving a residue of uncertainty only at the
+nonlinear gates.</p>
+
+<p>Second, at those nonlinear gates—the modular additions \(\shaplus\) and
+the quadratic functions \(\mathrm{Ch}, \mathrm{Maj}\)—a difference does
+not propagate deterministically but <em>branches into a probability
+distribution over output differences</em>. The fundamental case is a single
+addition (<a class="xref" href="#fig:diffadd">Figure 13</a>). Give one addend a one-bit difference at
+position \(i\) and add the same unknown \(y\) to both members of the pair:
+the two sums differ at bit \(i\) certainly, but whether the difference
+stops there is decided by the <em>carries</em>, which the \(\Ftwo\)-lens
+cannot see. If the carries out of position \(i\) agree—this happens for
+exactly half of all \((x,y)\)—the output difference is again the single
+bit \(e_i\); otherwise a carry-difference runs leftward, one further bit
+at a time, each extra bit halving the probability. One position is
+exceptional: a difference in the top bit (\(i = 31\)) propagates with
+probability \(1\), because the disagreeing carry falls off the end of the
+word and is discarded by the reduction mod \(2^{32}\). Attackers
+therefore park differences in the most significant bit whenever they
+can—a free move in an economy where everything else costs. The
+complete theory of differential propagation through addition (arbitrary
+difference patterns, exact probabilities, all computable in linear
+time) was worked out by Lipmaa and Moriai <a class="cite" href="bibliography.html#LipmaaMoriai2001">(2002)</a>, and its headline is a
+pleasing cost principle: <em>the probability of the straight-through
+transition is \(2^{-(\text{number of active bits, msb excluded})}\)</em>. To
+first order, difference weight is money, and the exchange rate is a
+factor of two per active bit. The bitwise functions obey the same
+economy: at each bit where its inputs differ, \(\mathrm{Ch}\) or
+\(\mathrm{Maj}\) passes or absorbs the difference depending on the values
+of the other, unknown operands—a coin flip per active bit, one more
+factor of \(\tfrac12\) each.</p>
+
+<figure class="viz-figure" id="fig:diffadd">
+  <div class="viz" id="viz-diffadd"></div>
+  <figcaption><strong>Figure 13.</strong> How a one-bit difference passes through modular addition
+  (bit \(7\) = most significant, in this \(8\)-bit cartoon of a \(32\)-bit
+  word). <em>Left:</em> an interior difference survives unchanged only if
+  the carries agree—probability \(\tfrac12\)—and every extra bit of
+  carry-difference costs another factor \(\tfrac12\)—the Lipmaa–Moriai
+  cost formula of the text. <em>Right:</em> a difference in the top bit
+  always passes intact, since the disagreeing carry is discarded mod
+  \(2^{32}\). Differential cryptanalysis views the whole of <span class="sha">SHA-256</span>
+  through this lens: linear pieces are free wires; every active bit at
+  a nonlinear gate levies a toll of \(\tfrac12\).
+    <a class="pdf-ref" href="kng256.pdf#page=46">static version: PDF p. 46</a></figcaption>
+</figure>
+
+<p>Notice what has happened in the language of <a class="xref" href="03-geometry.html#sec:statespace">§3.2</a>: the
+attacker has <em>chosen the \(\Ftwo\)-geometry</em> and agreed to pay, in
+probability, at every point where the design invokes the other one. All
+of the analytical cost is concentrated exactly at the carry chains and
+quadratic gates—the terms \(\Ftwo\)-linear algebra cannot see. There is
+a dual calculus using arithmetic differences \(x' - x \bmod 2^{32}\),
+which tames the additions and instead pays at the xors and rotations;
+the craft of the great hash attacks (<a class="xref" href="#sec:craft">§7.2</a>) was, in large
+part, the discovery that one should track <em>both</em> lenses
+simultaneously, bit by bit, in the form of signed differences. The
+two-geometry tension that <a class="xref" href="03-geometry.html#sec:statespace">§3.2</a> presented as the
+design’s defense is thus also, precisely, the structure of the attack:
+differential cryptanalysis is what the two-lens problem looks like when
+an adversary refuses to give up.</p>
+
+<h2 id="sec:craft">7.2&ensp;Trails, tolls, and free rounds <a class="pdf-ref" href="kng256.pdf#page=45">PDF p. 45</a></h2>
+
+<p>A single round is only the first step. A <em>differential
+characteristic</em> (or <em>trail</em>) prescribes a difference for every
+intermediate quantity through all the rounds—a full flight plan for
+the perturbation—and, under a heuristic independence assumption, its
+probability is the <em>product</em> of the per-gate transition
+probabilities along the way. An attacker who wants a collision needs a
+trail beginning at a nonzero message difference and ending, after the
+feedforward, at state difference <em>zero</em>; if the trail has
+probability \(p\), then about \(1/p\) random conforming attempts are
+expected before one message pair follows the entire flight plan and the
+hashes agree. The attack economy is thus brutally simple: <em>total
+toll</em> \(=\) sum, over all rounds, of active bits at nonlinear gates;
+<em>cost</em> \(\approx 2^{\text{toll}}\); the design’s job is to force
+every possible flight plan to accumulate an unpayable toll.</p>
+
+<figure class="static-figure" id="fig:localcollision">
+  <svg viewBox="0 0 620 240" role="img" style="max-width:640px;width:100%;height:auto;display:block;margin:0 auto"
+       aria-label="Cartoon of a local collision: a seed difference is injected in round t, five correction words follow, the state-difference weight decays to zero, and the per-round tolls multiply to 2 to the minus 12.">
+    <defs>
+      <marker id="lc-arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L7,3 L0,6 Z" fill="currentColor"/>
+      </marker>
+    </defs>
+    <!-- round labels -->
+    <g font-size="11" font-style="italic" text-anchor="middle" fill="currentColor">
+      <text x="134" y="22">t</text>
+      <text x="198" y="22">t+1</text>
+      <text x="263" y="22">t+2</text>
+      <text x="328" y="22">t+3</text>
+      <text x="392" y="22">t+4</text>
+      <text x="456" y="22">t+5</text>
+    </g>
+    <!-- message difference row -->
+    <text x="88" y="57" font-size="10" text-anchor="end" fill="currentColor">message diff. <tspan font-style="italic">&#948;W</tspan></text>
+    <g stroke="var(--ink-secondary)" stroke-width="1">
+      <rect x="111.5" y="39" width="45" height="28" fill="#ffbfbf"/>
+      <rect x="175.5" y="39" width="45" height="28" fill="#d5e5f5"/>
+      <rect x="240.5" y="39" width="45" height="28" fill="#d5e5f5"/>
+      <rect x="305.5" y="39" width="45" height="28" fill="#d5e5f5"/>
+      <rect x="369.5" y="39" width="45" height="28" fill="#d5e5f5"/>
+      <rect x="433.5" y="39" width="45" height="28" fill="#d5e5f5"/>
+    </g>
+    <g font-size="10" text-anchor="middle" fill="var(--ink)">
+      <text x="134" y="57">seed</text>
+      <text x="198" y="57">corr.</text>
+      <text x="263" y="57">corr.</text>
+      <text x="328" y="57">corr.</text>
+      <text x="392" y="57">corr.</text>
+      <text x="456" y="57">corr.</text>
+    </g>
+    <!-- state difference weight bars -->
+    <text x="88" y="110" font-size="10" text-anchor="end" fill="currentColor">state diff. weight</text>
+    <rect x="123" y="104" width="25" height="33" fill="#ff8080"/>
+    <rect x="188" y="112" width="25" height="25" fill="#ffa6a6"/>
+    <rect x="252" y="112" width="25" height="25" fill="#ffa6a6"/>
+    <rect x="316" y="116" width="26" height="21" fill="#ffa6a6"/>
+    <rect x="381" y="123" width="25" height="14" fill="#ffbfbf"/>
+    <line x1="104" y1="137" x2="522" y2="137" stroke="currentColor" stroke-width="1" marker-end="url(#lc-arrow)"/>
+    <line x1="445" y1="137" x2="522" y2="137" stroke="var(--green)" stroke-width="3.5"/>
+    <text x="494" y="128" font-size="10" text-anchor="middle" fill="var(--green)">zero again</text>
+    <!-- toll ledger -->
+    <g font-size="11" fill="currentColor">
+      <text x="88" y="176" font-size="10" text-anchor="end">toll this round</text>
+      <text x="134" y="176" text-anchor="middle">2<tspan font-size="8" dy="-4">&#8722;1</tspan></text>
+      <text x="198" y="176" text-anchor="middle">2<tspan font-size="8" dy="-4">&#8722;3</tspan></text>
+      <text x="263" y="176" text-anchor="middle">2<tspan font-size="8" dy="-4">&#8722;3</tspan></text>
+      <text x="328" y="176" text-anchor="middle">2<tspan font-size="8" dy="-4">&#8722;2</tspan></text>
+      <text x="392" y="176" text-anchor="middle">2<tspan font-size="8" dy="-4">&#8722;2</tspan></text>
+      <text x="456" y="176" text-anchor="middle">2<tspan font-size="8" dy="-4">&#8722;1</tspan></text>
+      <text x="488" y="176">&#8658;&#8202; &#8719; = 2<tspan font-size="8" dy="-4">&#8722;12</tspan></text>
+    </g>
+    <!-- brace -->
+    <path d="M115,190 Q115,199 124,199 L286,199 Q295,199 295,208 Q295,199 304,199 L467,199 Q476,199 476,190"
+          fill="none" stroke="currentColor" stroke-width="1"/>
+    <text x="295" y="225" font-size="10" text-anchor="middle" fill="currentColor">one <tspan font-style="italic">local collision</tspan>: inject, shepherd, cancel</text>
+  </svg>
+  <figcaption><strong>Figure 14.</strong> Cartoon of a <em>local collision</em>, the modular building
+  block of every attack on this family since Chabaud and Joux’s 1998
+  analysis of SHA-0 (cited in the text): a seed difference is injected
+  through one
+  message word, then five successive message-word corrections shepherd
+  and finally cancel the disturbance, leaving the state clean. Each
+  round levies its toll (<a class="xref" href="#fig:diffadd">Figure 13</a>); the trail’s probability
+  is the product. A full attack chains many local collisions along a
+  pattern compatible with the message schedule—and the toll of the
+  best full trail is what decides whether the design lives or dies.
+  <a class="pdf-ref" href="kng256.pdf#page=46">PDF p. 46</a></figcaption>
+</figure>
+
+<p>Three refinements turn this arithmetic into the attacks of
+<a class="xref" href="02-history.html#sec:falling">§2.3</a>, and all three are conceptually simple. First,
+<em>local collisions</em> (<a class="xref" href="#fig:localcollision">Figure 14</a>): rather than one
+monolithic trail, the attacker builds a short pattern—inject a
+difference through one message word, cancel it a few rounds later
+through others—and then chains copies of the pattern wherever the
+message schedule permits&nbsp;<a class="cite" href="bibliography.html#ChabaudJoux1998">(Chabaud and Joux, 1998)</a>. Second, <em>message
+freedom</em>: for the first sixteen rounds the words \(W_t\) are the message
+itself (<a class="xref" href="03-geometry.html#sec:roundshape">§3.3</a>), so the attacker does not <em>hope</em>
+the early tolls are paid—she <em>solves</em> for message bits that pay
+them deterministically. Wang’s celebrated breaks of MD5 and
+SHA-1&nbsp;(<a class="cite" href="bibliography.html#WangYu2005">Wang and Yu, 2005</a>; <a class="cite" href="bibliography.html#WangYinYu2005">Wang et al., 2005</a>) rested on pushing this
+“message modification” astonishingly deep; the practical effect is
+that the toll meter starts running only around round \(17\), and the
+first quarter of the function contributes nothing to its own defense.
+Third, <em>automation</em>: what Wang’s school did by virtuosic hand
+calculation—juggling xor- and arithmetic-differences as signed,
+bit-level conditions—was recast by De Cannière and Rechberger <a class="cite" href="bibliography.html#DeCanniereRechberger2006">(2006)</a>
+as a constraint-propagation search over “generalized conditions,”
+mechanically discovering trails no human would find. The current
+records on <span class="sha">SHA-256</span> are held by exactly this lineage of tools, now
+built on MILP, <span class="sc">sat</span>, and <span class="sc">smt</span>
+solvers&nbsp;(<a class="cite" href="bibliography.html#MendelNadSchlaffer2013">Mendel et al., 2013</a>; <a class="cite" href="bibliography.html#LiLiuWang2024">Li et al., 2024</a>), closing the loop
+with <a class="xref" href="08-computability.html#sec:npsearch">§8.1</a>: the adversary’s calculus has itself become a
+branch of solver engineering.</p>
+
+<h2 id="sec:secrethistory">7.3&ensp;A method twenty years secret <a class="pdf-ref" href="kng256.pdf#page=47">PDF p. 47</a></h2>
+
+<p>The published history begins in 1990, when Biham and Shamir announced
+differential cryptanalysis and used it to attack reduced variants of
+DES, the American encryption standard of
+1977&nbsp;<a class="cite" href="bibliography.html#BihamShamir1991">(Biham and Shamir, 1991)</a>. A curiosity surfaced immediately: DES,
+designed in the early 1970s, was <em>strangely well prepared</em> for the
+new attack. Its nonlinear tables were, component for component, close
+to optimally resistant; the method that broke every academic variant
+of DES bounced off the real thing.</p>
+
+<p>The explanation arrived in 1994, and it is one of the most remarkable
+documents in the literature. Coppersmith, of the original IBM design
+team, was cleared to reveal the design criteria and wrote them down
+plainly: the IBM team had discovered differential cryptanalysis
+themselves—internally, the “T-attack”—<em>in 1974</em>, and
+hardened DES against it before standardization; the NSA, consulted on
+the design, asked that the rationale be kept secret, since publishing
+the criteria “would reveal the technique of differential
+cryptanalysis, a powerful technique that can be used against many
+ciphers”&nbsp;<a class="cite" href="bibliography.html#Coppersmith1994">(Coppersmith, 1994)</a>. The central tool of public
+cryptanalysis was thus twenty years old on the day it was discovered.
+For sixteen of those years, every open researcher who studied DES was
+probing defenses calibrated against a weapon whose existence they did
+not suspect.</p>
+
+<p>This is not merely a good story; it is a load-bearing datum for the
+epistemology of <a class="xref" href="02-history.html#sec:epistemology">§2.4</a>, because the pattern
+<em>repeats within our own object’s lineage</em>. Recall the footnote of
+<a class="xref" href="02-history.html#sec:history">§2</a>: in 1994–95 the NSA withdrew SHA-0 and changed a
+single rotation, citing an undisclosed weakness; the public rediscovery
+of what that tweak defends against—a differential collision
+attack—took until 1998&nbsp;<a class="cite" href="bibliography.html#ChabaudJoux1998">(Chabaud and Joux, 1998)</a>. Twice measured, the
+gap between the classified and the public understanding of this exact
+attack has been twenty years and four years. The honest inference for a
+naturalist: the map of <a class="xref" href="06-frameworks.html#sec:below">§6.4</a> is the <em>public</em> frontier,
+a lower bound on the true state of knowledge, drawn by a community that
+has historically been behind by years to decades—and <span class="sha">SHA-256</span>’s design
+parameters were set by the party that was ahead. The comfort and the
+discomfort of that fact are left to the reader to apportion.</p>
+
+<h2 id="sec:siege">7.4&ensp;The siege of <span class="sha">SHA-256</span>, and where it stands <a class="pdf-ref" href="kng256.pdf#page=47">PDF p. 47</a></h2>
+
+<p>Why did the calculus shatter MD5 and SHA-1 while <span class="sha">SHA-256</span>, made of the
+same primitives, holds? The anatomy of <a class="xref" href="03-geometry.html#sec:roundshape">§3.3</a> contains
+the visible answers. SHA-1’s message schedule is entirely
+\(\Ftwo\)-linear, so schedule differences propagate by exact linear
+algebra and <em>sparse</em> schedules—low total weight, hence low
+toll—can be found by searching a linear code for low-weight words;
+this is precisely the handle the collision attacks
+gripped (<a class="xref" href="03-geometry.html#sec:hope">§3.7</a>). <span class="sha">SHA-256</span> interleaves modular additions into
+the schedule itself and taxes every round twice over: each of
+\(\Sigma_0, \Sigma_1\) fans any single active bit into three, both tracks
+of the two-track recurrence pass through a quadratic gate every round,
+and the \(\sigma\)-mixing makes a sparse schedule difference bloom
+within a few steps. The result, empirically: low-toll trails simply
+stop existing a dozen-odd rounds past the free zone, and two decades of
+search—human, then mechanical—have moved the frontier only from
+about \(19\) rounds (2006) to \(31\) rounds (collisions) today. The precise
+current records: practical colliding pairs for \(28\) rounds and a
+\(2^{65.5}\) collision attack on \(31\) rounds of the \(64\), both from the
+automated-search school&nbsp;<a class="cite" href="bibliography.html#MendelNadSchlaffer2013">(Mendel et al., 2013)</a>; practical
+<em>semi-free-start</em> collisions (the attacker may choose the chaining
+value, removing the Merkle–Damgård anchor of <a class="xref" href="03-geometry.html#thm:md">Theorem 3.1</a>) for
+\(38\) rounds in 2013 and \(39\) rounds in 2024, the latter found with a
+<span class="sc">sat</span>/<span class="sc">smt</span> trail search&nbsp;(<a class="cite" href="bibliography.html#LiLiuWang2024">Li et al., 2024</a>; <a class="cite" href="bibliography.html#AlamgirNejatiBright2024">Alamgir et al., 2024</a>); and, on the inversion side, preimages to \(45\)
+rounds at a cost indistinguishable from brute
+force&nbsp;<a class="cite" href="bibliography.html#KRS2012">(Khovratovich et al., 2012)</a>. Li, Liu, and Wang open their record-setting 2024
+paper with the flat sentence that “there is almost no progress in
+collision attacks on SHA-2 after ASIACRYPT 2015”—a decade of solver
+revolutions purchasing one round.</p>
+
+<p>The shape of the stall is worth internalizing, because it is the
+quantitative content of the phrase “security margin.” Rounds \(1\)–\(16\)
+are free (message freedom); rounds \(17\) to roughly \(40\) are the
+contested zone, where automated searches still find trails but each
+round multiplies the toll; beyond that, <em>no usable trail has ever
+been exhibited</em>, not because a theorem forbids one but because every
+known search method drowns. The design’s \(64\) rounds thus stand at
+about twice the depth the best siege engines have ever reached with
+unlimited choice of starting position. Whether that factor of two is a
+fortress wall or a picket fence is exactly the question
+<a class="xref" href="02-history.html#sec:falling">§2.3</a> showed nobody can answer from first principles: no
+theory predicts the frontier’s future velocity, and the SHA-1
+precedent—from academic \(2^{69}\) to industrial collision in twelve
+years—is the reason nobody treats the margin as a moat. (One further
+credential: the compression function’s core, extracted and run as a
+block cipher under the name SHACAL-2, survived the open European
+NESSIE evaluation and was selected for its 2003 portfolio—the same
+engine vetted from a second angle, as a cipher rather than a hash.)</p>
+
+<p>For this paper’s program the moral is double. The adversary’s calculus
+is the most refined body of exact knowledge about <em>reduced</em>
+members of the family—every trail is a theorem-with-certificate about
+a specific truncation, machine-checkable pair in hand—and at the same
+time it is purely <em>local</em> knowledge: a trail certifies one orbit
+of one difference, and says nothing global about the map. The
+statistical coordinates of <a class="xref" href="04-random-maps.html#sec:randommaps">§4</a> and the trail calculus
+of this section are complementary instruments, and to our knowledge no
+one has systematically pointed them at the same scaled-down family to
+see whether the round where trails die is the round where the Flajolet
+silhouette locks in (<a class="xref" href="09-projects.html#sec:projects">§9</a>).</p>
+
+<div class="project" id="project-12">
+  <div class="project-title">Project 12: Differential trails in miniature</div>
+  <p>Build the toll calculus for a toy <span class="sha">SHA-256</span> on \(8\)-bit words. First
+  verify <a class="xref" href="#fig:diffadd">Figure 13</a> empirically: tabulate the exact
+  distribution of \(\Delta(x \shaplus y)\) over all pairs for every
+  one-bit \(\Delta x\), and check the Lipmaa–Moriai
+  cost formula&nbsp;<a class="cite" href="bibliography.html#LipmaaMoriai2001">(Lipmaa and Moriai, 2002)</a>. Then implement a
+  branch-and-bound search for the lowest-toll trail through \(r\) rounds
+  of the toy compression function and plot \(\log_2(\text{best trail probability})\) against \(r\). Two landmarks make the plot speak: the
+  birthday line (\(-n/2\) for an \(n\)-bit toy state), below which a trail
+  is useless to an attacker, and the round at which your search itself
+  starts to drown. You will have reproduced, at fruit-fly scale, both
+  the designer’s round-count decision and the attacker’s wall—the two
+  sides of <a class="xref" href="#sec:siege">§7.4</a>—and the same code instruments the
+  comparative questions of <a class="xref" href="09-projects.html#sec:projects">§9</a>.</p>
+  <div class="project-meta"><em>Prerequisites:</em> probability; programming; patience with bit manipulation &ensp; <em>Window:</em> 4–6 weeks</div>
+</div>
+
+<h2 id="sec:mlcrypt">7.5&ensp;Coda: can a machine learn the difference? <a class="pdf-ref" href="kng256.pdf#page=49">PDF p. 49</a></h2>
+
+<p>One newer thread deserves flagging, because it closes a loop with the
+proof-barrier of <a class="xref" href="08-computability.html#sec:barriers">§8.4</a> in a way that is either profound or
+a curiosity, and nobody yet knows which. In 2019 Gohr trained a neural
+network to distinguish the outputs of a round-reduced ARX cipher
+(Speck, a near-relative of <span class="sha">SHA-256</span>’s primitives) from random, and it
+<em>beat</em> the best hand-built differential distinguishers—and, on
+inspection, had learned features <em>beyond</em> the difference
+distribution table, correlations the human theory of <a class="xref" href="#sec:diffcalc">§7.1</a>
+does not track&nbsp;<a class="cite" href="bibliography.html#Gohr2019">(Gohr, 2019)</a>. Read against Razborov–Rudich
+(<a class="xref" href="08-computability.html#sec:barriers">§8.4</a>), this is quietly startling. A trained
+distinguisher <em>is</em> a natural property in their precise sense—an
+efficiently computable, large predicate that separates the function
+from random—so a machine that reliably learns such properties on
+<span class="sha">SHA-256</span>-family maps would be walking, empirically, along the exact edge
+the natural-proofs barrier says cannot be crossed at full scale.
+Whether the network finds real, nameable structure (extractable back
+into human mathematics, in the spirit of <a class="xref" href="03-geometry.html#sec:hope">§3.7</a>) or merely a
+more efficient encoding of the same statistical residue is, at present,
+an open and very testable question—and a natural apex to the
+undergraduate program, where a student can point a modern learning tool
+at a scaled-down family and see, concretely, what a machine can and
+cannot pull out of manufactured randomness.</p>
+
+<div class="project" id="project-13">
+  <div class="project-title">Project 13: A neural distinguisher at toy scale</div>
+  <p>Reproduce Gohr’s experiment&nbsp;<a class="cite" href="bibliography.html#Gohr2019">(Gohr, 2019)</a> on a <span class="sha">SHA-256</span>-family toy:
+  train a small network to distinguish \(r\)-round outputs (or output
+  differences) from random, and chart its advantage against \(r\)
+  alongside the trail-toll curve of the miniature-trails project above
+  and the statistical-battery frontier of <a class="xref" href="06-frameworks.html#sec:gap">§6.7</a>. Then
+  ask the hard question: <em>interpret</em> the trained model—does its
+  decision reduce to a differential-distribution feature the human
+  theory already knows (<a class="xref" href="#sec:diffcalc">§7.1</a>), or to something new? A
+  negative result is a clean measurement; a positive one is the first
+  thread of a natural property in a real hash family, and worth far
+  more than a course grade.</p>
+  <div class="project-meta"><em>Prerequisites:</em> programming; a machine-learning course &ensp; <em>Window:</em> 6–8 weeks (flagship)</div>
+</div>
+
+<div id="pagenav"></div>
+</main>
+</div>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="assets/site.js"></script>
+<script defer src="assets/viz.js"></script>
+</body>
+</html>
