@@ -531,6 +531,7 @@
     $("xp-step").addEventListener("click", function () { stopPlay(); if (st.t < 64) st.t++; renderRounds(); });
     $("xp-play").addEventListener("click", function () { st.playing ? stopPlay() : startPlay(); renderRounds(); });
     $("xp-slider").addEventListener("input", function (ev) { stopPlay(); st.t = +ev.target.value; renderRounds(); });
+    renderOdometer();                  // the odometer tracks the same stepper
   }
   function startPlay() {
     st.playing = true;
@@ -542,6 +543,150 @@
   function stopPlay() {
     st.playing = false;
     if (st.timer) { clearInterval(st.timer); st.timer = null; }
+  }
+
+  /* ---- panel: odometer trajectory ---- */
+  // Position of the state on the discrete circle after each round.
+  // mode "total": the 256-bit concatenation as one number mod 2^256 (BigInt);
+  // mode 0..7: a single register mod 2^32.
+  function odoFracs(trace, mode) {
+    var fr = [], i, t;
+    if (mode === "total") {
+      for (t = 0; t <= 64; t++) {
+        var v = 0n;
+        for (i = 0; i < 8; i++) v = (v << 32n) | BigInt(trace[t][i] >>> 0);
+        fr.push(Number(v >> 203n) / 9007199254740992);      // top 53 bits / 2^53
+      }
+    } else {
+      for (t = 0; t <= 64; t++) fr.push((trace[t][mode] >>> 0) / 4294967296);
+    }
+    return fr;
+  }
+  // Exact magnitude (in bits) and direction of round t's jump, for the readout.
+  function odoJump(trace, mode, t) {
+    var fwd, mag;
+    if (mode === "total") {
+      var M = 1n << 256n, a = 0n, b = 0n, i;
+      for (i = 0; i < 8; i++) { a = (a << 32n) | BigInt(trace[t][i] >>> 0);
+                                b = (b << 32n) | BigInt(trace[t+1][i] >>> 0); }
+      var d = ((b - a) % M + M) % M;
+      fwd = d < (1n << 255n);
+      var m = fwd ? d : M - d;
+      mag = m.toString(2).length - 1;                       // ~log2
+      if (m === 0n) mag = 0;
+    } else {
+      var d2 = ((trace[t+1][mode] - trace[t][mode]) % 4294967296 + 4294967296) % 4294967296;
+      fwd = d2 < 2147483648;
+      var m2 = fwd ? d2 : 4294967296 - d2;
+      mag = m2 > 0 ? Math.floor(Math.log2(m2)) : 0;
+    }
+    return { fwd: fwd, mag: mag };
+  }
+
+  function renderOdometer() {
+    var el = $("xp-odometer"); if (!el) return;
+    var mode = st.odoMode === undefined ? "total" : st.odoMode;
+    var trace = st.run.trace, t = st.t;
+    var fr = odoFracs(trace, mode);
+
+    el.innerHTML =
+      "<div class='viz-controls'>" +
+        "<label for='xp-odo-mode'>clock&nbsp;</label>" +
+        "<select id='xp-odo-mode'>" +
+          "<option value='total'>whole state — one 2²⁵⁶-hour clock</option>" +
+          REGS.map(function (r, i) {
+            return "<option value='" + i + "'>register " + r + " — a 2³²-hour clock</option>";
+          }).join("") +
+        "</select>" +
+        "<span class='viz-readout' id='xp-odo-read'></span>" +
+      "</div>" +
+      "<div id='xp-odo-cv'></div>" +
+      "<div class='xp-legend'>" +
+        "<span class='op-add'>■ forward (clockwise)</span>" +
+        "<span class='op-lin'>■ backward</span>" +
+        "<span class='op-const'>faint = rounds not yet applied — scrub the stepper above</span>" +
+      "</div>";
+    var sel = $("xp-odo-mode");
+    sel.value = String(mode);
+    sel.addEventListener("change", function () {
+      st.odoMode = sel.value === "total" ? "total" : +sel.value;
+      renderOdometer();
+    });
+
+    var W = 400, H = 400, cx = W / 2, cy = H / 2;
+    var c = makeCanvas($("xp-odo-cv"), W, H), ctx = c.ctx;
+    var navy = cssVar("--navy") || "#003c78", wine = cssVar("--wine") || "#781432";
+    var hair = cssVar("--hairline") || "#ddd", muted = cssVar("--ink-muted") || "#999";
+    var green = cssVar("--green") || "#5a7846";
+    var r0 = 62, dr = 1.75;
+    function ang(f) { return -Math.PI / 2 + f * 2 * Math.PI; }
+
+    // clock face
+    ctx.strokeStyle = hair; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(cx, cy, r0 - 14, 0, 2 * Math.PI); ctx.stroke();
+    ctx.font = "10.5px system-ui, sans-serif"; ctx.fillStyle = muted;
+    ctx.textAlign = "center";
+    var topLbl = mode === "total" ? "0" : "0";
+    var botLbl = mode === "total" ? "2²⁵⁵" : "2³¹";
+    ctx.fillText(topLbl, cx, cy - r0 + 26);
+    ctx.fillText(botLbl, cx, cy + r0 - 20);
+    [0, 0.25, 0.5, 0.75].forEach(function (f) {
+      var a = ang(f);
+      ctx.beginPath();
+      ctx.moveTo(cx + (r0 - 18) * Math.cos(a), cy + (r0 - 18) * Math.sin(a));
+      ctx.lineTo(cx + (r0 - 10) * Math.cos(a), cy + (r0 - 10) * Math.sin(a));
+      ctx.stroke();
+    });
+
+    // trajectory arcs, spiraling outward one ring per round
+    var fwdCount = 0, backCount = 0;
+    for (var k = 0; k < 64; k++) {
+      var df = fr[k + 1] - fr[k]; df -= Math.floor(df);      // in [0,1)
+      var fwd = df <= 0.5;
+      var span = fwd ? df : 1 - df, dir = fwd ? 1 : -1;
+      if (k < t) { if (fwd) fwdCount++; else backCount++; }
+      var applied = k < t;
+      ctx.strokeStyle = fwd ? navy : wine;
+      ctx.globalAlpha = applied ? (k === t - 1 ? 1 : 0.65) : 0.10;
+      ctx.lineWidth = k === t - 1 ? 2.6 : 1.3;
+      ctx.beginPath();
+      var steps = Math.max(8, Math.ceil(span * 90));
+      for (var s2 = 0; s2 <= steps; s2++) {
+        var u = s2 / steps;
+        var a2 = ang(fr[k]) + dir * span * 2 * Math.PI * u;
+        var rr = r0 + (k + u) * dr;
+        var x2 = cx + rr * Math.cos(a2), y2 = cy + rr * Math.sin(a2);
+        s2 ? ctx.lineTo(x2, y2) : ctx.moveTo(x2, y2);
+      }
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+
+    // start (IV) and current-position markers
+    var a0 = ang(fr[0]);
+    ctx.fillStyle = green;
+    ctx.beginPath();
+    ctx.arc(cx + r0 * Math.cos(a0), cy + r0 * Math.sin(a0), 4, 0, 2 * Math.PI); ctx.fill();
+    ctx.fillStyle = muted;
+    ctx.fillText("IV", cx + (r0 - 24) * Math.cos(a0) - 8, cy + (r0 - 24) * Math.sin(a0) + 12);
+    var ac = ang(fr[t]), rc = r0 + t * dr;
+    ctx.fillStyle = navy;
+    ctx.beginPath();
+    ctx.arc(cx + rc * Math.cos(ac), cy + rc * Math.sin(ac), 5.5, 0, 2 * Math.PI); ctx.fill();
+    ctx.strokeStyle = navy; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(cx + rc * Math.cos(ac), cy + rc * Math.sin(ac), 9, 0, 2 * Math.PI); ctx.stroke();
+
+    var read = $("xp-odo-read");
+    if (t === 0) {
+      read.textContent = "at the IV — no rounds applied yet";
+    } else {
+      var j = odoJump(trace, mode, t - 1);
+      read.innerHTML = "round " + (t - 1) + " jumped <b style='color:" +
+        (j.fwd ? navy : wine) + "'>" + (j.fwd ? "forward" : "backward") +
+        " ≈ 2<sup>" + j.mag + "</sup></b> &nbsp;·&nbsp; so far: " +
+        fwdCount + " forward, " + backCount + " backward";
+    }
   }
 
   /* ---- panel: twin-run ripple (heatmap + two metrics) ---- */
@@ -706,7 +851,7 @@
   function renderAll() {
     renderPipeline(); renderPadding(); renderSchedule(); renderRounds();
     renderRipple(); renderDigest(); renderSelfCheck();
-  }
+  }                                    // renderRounds() ends by drawing the odometer
 
   function boot() {
     var msgIn = $("xp-msg");
@@ -726,7 +871,7 @@
         if (fi) { fi.focus(); }
       }
     });
-    document.addEventListener("k256-theme-change", function () { renderRipple(); });
+    document.addEventListener("k256-theme-change", function () { renderRipple(); renderOdometer(); });
     recompute();
   }
 

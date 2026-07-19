@@ -102,6 +102,28 @@ the wires; the bit table below it shows the same computation bit by bit.</p>
   <div class="viz" id="xp-rounds"></div>
 </figure>
 
+<h2 id="stage-odometer">The odometer view: each round is a jump around the circle
+  <a class="pdf-ref" href="kng256.pdf#page=13" title="Figure 4 in the paper">PDF p. 13</a></h2>
+<p>The paper's odometer picture (<a class="xref"
+href="03-geometry.html#fig:odometer">Figure 4</a>) reads the whole state as one
+number on a discrete circle: modular addition \(\shaplus\) is a rotation of a
+\(2^{256}\)-hour clock. Here is that circle with the <em>actual trajectory</em>
+of your message's computation spiraling around it: each compression round
+moves the total forward (navy, clockwise) or backward (wine) to its new
+position, and the trajectory grows outward one ring per round so the path
+stays visible. Scrub the round stepper above and watch the jumps land.</p>
+<figure class="viz-figure">
+  <div class="viz" id="xp-odometer"></div>
+  <figcaption>Rounds as rotations of the odometer. The jumps are astronomical
+  — a typical round moves the total by about \(2^{254}\), a quarter-turn of a
+  circle with \(2^{256}\) positions — and their directions come out as evenly
+  as coin flips: the clock is being <em>spun</em>, not nudged. The honest
+  caveat of <a class="xref" href="03-geometry.html#fig:odometer">Figure 4</a>
+  applies: the machine's true state is eight coupled \(2^{32}\)-clocks, not
+  one big one — switch the dial to a single register to see one small clock's
+  own dance.</figcaption>
+</figure>
+
 <h2 id="stage-ripple">One flipped bit, two metrics
   <a class="pdf-ref" href="kng256.pdf#page=12" title="§3.2 in the paper">PDF p. 12</a></h2>
 <p>Run the machine twice, on your message and on a twin with a single bit
