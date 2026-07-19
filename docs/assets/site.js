@@ -14,6 +14,7 @@
     { file: "07-differential.html",num: "7", title: "The adversary’s calculus: differential cryptanalysis" },
     { file: "08-computability.html",num:"8", title: "The view from computability" },
     { file: "09-projects.html",    num: "9", title: "Undergraduate short projects" },
+    { file: "timeline.html",       num: "",  title: "⧗ Timeline (alternate contents)" },
     { file: "bibliography.html",   num: "",  title: "References" }
   ];
 

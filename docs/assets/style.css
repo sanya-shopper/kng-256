@@ -421,6 +421,38 @@ a.live-ref {
 }
 a.live-ref:hover { border-color: var(--green); }
 
+/* ---- timeline appendix ---- */
+.tl-lanehead { display: flex; position: sticky; top: 0; z-index: 5;
+               background: var(--surface-raised); padding: 0.4rem 0;
+               border-bottom: 1px solid var(--hairline);
+               font-family: "Gill Sans", "Segoe UI", Arial, sans-serif;
+               font-size: 0.78rem; font-weight: bold; }
+.tl-lanehead span { display: inline-block; padding-left: 8px; }
+.tl-year { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 10px;
+           fill: var(--ink-muted); }
+.tl-card { position: absolute; box-sizing: border-box;
+           background: var(--surface-raised); border: 1px solid var(--hairline);
+           border-left: 3px solid var(--navy); border-radius: 5px;
+           padding: 3px 7px 4px; font-size: 0.72rem; line-height: 1.25;
+           font-family: "Gill Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+           transition: box-shadow 0.15s, opacity 0.2s; }
+.tl-cardyear { float: right; color: var(--ink-muted); font-size: 0.62rem;
+               font-variant-numeric: tabular-nums; margin-left: 4px; }
+.tl-cardtitle { display: block; color: var(--ink); text-decoration: none;
+                font-weight: 600; }
+.tl-cardtitle:hover { color: var(--navy); }
+.tl-chips { display: block; margin-top: 1px; }
+.tl-chip { font-size: 0.6rem; color: var(--navy); background: var(--pdfref-bg);
+           border: 1px solid var(--hairline); border-radius: 999px;
+           padding: 0 0.35rem; text-decoration: none; margin-right: 3px; }
+.tl-chip:hover { border-color: var(--navy); }
+.tl-canvas.tl-focus .tl-card { opacity: 0.35; }
+.tl-canvas.tl-focus .tl-card.related { opacity: 1;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.22); z-index: 4; }
+.tl-arrow { transition: opacity 0.15s; }
+.tl-canvas.tl-focus .tl-arrow { opacity: 0.06; }
+.tl-canvas.tl-focus .tl-arrow.on { opacity: 0.95 !important; stroke-width: 2; }
+
 /* ---- bibliography ---- */
 .bib-entry { margin: 0.7rem 0; padding-left: 1.6rem; text-indent: -1.6rem;
              font-size: 0.94rem; scroll-margin-top: 1rem; }
