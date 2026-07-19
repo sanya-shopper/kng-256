@@ -213,7 +213,17 @@ figcaption strong { color: var(--ink); }
   content: "interactive figure — requires JavaScript";
   color: var(--ink-muted); font-style: italic; font-size: 0.85rem;
 }
-.viz-extra > .viz { border-style: dashed; }
+.viz-extra .viz { border-style: dashed; }
+details.viz-details > summary {
+  font-family: "Gill Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-size: 0.78rem; letter-spacing: 0.02em;
+  color: var(--navy); cursor: pointer; user-select: none;
+  margin-bottom: 0.45rem;
+}
+details.viz-details > summary:hover { text-decoration: underline; }
+details.viz-details:not([open]) > summary::after {
+  content: "  (hidden — click to show)"; color: var(--ink-muted); font-style: italic;
+}
 .pdf-card {
   background: var(--surface-raised); border: 1px dashed var(--hairline);
   border-radius: 8px; padding: 1rem; color: var(--ink-secondary);
